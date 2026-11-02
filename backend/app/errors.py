@@ -1,0 +1,8 @@
+class AppError(Exception):
+    def __init__(self, status: int, code: int, message: str):
+        self.status, self.code, self.message = status, code, message
+        super().__init__(message)
+
+
+def unauthorized() -> AppError:
+    return AppError(401, 20002, "Token 无效或过期")
