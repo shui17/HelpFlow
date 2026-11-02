@@ -1,4 +1,4 @@
-"""仅供早期接口回归测试：把同步练习 Service 适配到异步路由。"""
+"""仅供接口回归测试：把同步内存 Service 适配到异步路由。"""
 
 
 class AsyncMemoryService:
@@ -24,5 +24,5 @@ from fastapi import Request
 from types import SimpleNamespace
 
 async def transport_user(request: Request):
-    # 早期 HTTP 测试只验证传输层。真实认证与归属测试见 test_stage6_security。
+    # 早期 HTTP 测试只验证传输层。真实认证与归属测试见 test_security。
     return SimpleNamespace(id=1, role="admin" if "/users/" in request.url.path else "user")

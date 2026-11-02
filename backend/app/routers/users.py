@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Path, Query
 from app.dependencies import AdminUser, get_user_service
 from app.schemas import ApiResponse, PageData, UserResponse, UserRoleUpdate, UserStatusUpdate
 from app.services.users import UserService
-from practice.stage1_helpflow.enums import UserRole
+from app.domain.enums import UserRole
 
 router = APIRouter(prefix="/users", tags=["users"])
 UserServiceDependency = Annotated[UserService, Depends(get_user_service)]

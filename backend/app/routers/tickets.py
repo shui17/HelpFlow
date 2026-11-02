@@ -15,7 +15,7 @@ from app.schemas import (
     TicketStatusUpdateRequest,
     TicketUpdate,
 )
-from practice.stage1_helpflow.enums import TicketPriority, TicketStatus
+from app.domain.enums import TicketPriority, TicketStatus
 from app.services.tickets import TicketService
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])

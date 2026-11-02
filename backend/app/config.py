@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """只读取当前阶段需要的配置，环境变量优先于 .env。"""
+    """读取应用配置，环境变量优先于 .env。"""
 
     model_config = SettingsConfigDict(
         env_prefix="HELPFLOW_",

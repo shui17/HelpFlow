@@ -1,0 +1,84 @@
+# HelpFlow 文件职责与依赖
+
+仓库按业务职责组织，更新日期：2026-11-02。正式 API 使用异步 MySQL，支持身份认证、用户管理、工单流转、回复和活动时间线。
+
+## 目录
+
+```text
+backend/
+├── app/
+│   ├── domain/          # 枚举、业务异常与工单流转规则
+│   ├── routers/         # auth、users、tickets、health HTTP 入口
+│   ├── services/        # 用户与工单业务、权限和写事务
+│   ├── repositories/    # 用户与工单查询、行锁及数据写入
+│   ├── models/          # 五张业务表的 SQLAlchemy 映射
+│   ├── db/              # ORM 基类、UTC 时间、引擎和会话
+│   ├── in_memory/       # 内存数据类、存储及同步业务实现
+│   ├── schemas.py       # 输入校验、输出白名单及分页
+│   ├── dependencies.py  # 会话、服务、身份与角色依赖
+│   ├── security.py      # Argon2 密码与 JWT
+│   ├── errors.py        # HTTP 业务错误
+│   ├── exception_handlers.py
+│   ├── middleware.py    # 请求日志与耗时
+│   ├── config.py        # 环境变量和配置
+│   └── main.py          # 应用装配与生命周期
+├── alembic/             # 数据库结构迁移
+├── scripts/             # 管理员初始化
+├── examples/            # 内存工单流程、异步 I/O 示例
+├── sql/                 # 建表、数据、查询、索引、事务和 CRUD
+└── tests/               # 按功能命名的回归和集成测试
+docs/
+├── requirements/        # PRD 与需求确认
+├── architecture/        # 前后端设计、文件职责与 decisions 历史设计
+└── guides/              # 按功能组织的操作指南
+frontend/                # 前端预留目录
+```
+
+## 业务与依赖
+
+```mermaid
+flowchart TD
+    main[main 应用装配] --> routers[routers HTTP 入口]
+    routers --> schemas[schemas 输入输出]
+    routers --> deps[dependencies 身份与服务注入]
+    deps --> security[security 密码和 JWT]
+    deps --> services[services 用户与工单业务]
+    services --> domain[domain 业务规则]
+    services --> repos[repositories 数据访问]
+    repos --> models[models 五表映射]
+    repos --> session[db 请求级 Session]
+    session --> mysql[(MySQL)]
+    memory[in_memory 同步业务] --> domain
+    examples[examples 工单示例] --> memory
+```
+
+正式业务依赖 `app/domain`，状态流转表位于 `domain/workflow.py`。内存实现供示例和替换依赖的 HTTP 测试使用；正式 API 的 Service 不依赖内存实现。
+
+| 业务 | 主要入口与实现 | 验证 |
+| --- | --- | --- |
+| 注册、登录、当前用户、修改密码 | routers/auth.py、services/users.py、security.py | tests/test_security.py |
+| 用户查询、角色、启用状态与管理日志 | routers/users.py、services/users.py、repositories/users.py | tests/test_security.py |
+| 工单创建、筛选、分页与修改 | routers/tickets.py、services/tickets.py、repositories/tickets.py | tests/test_http.py、tests/test_api_validation.py、tests/test_database.py |
+| 领取、分配、撤销、流转、回复和时间线 | services/tickets.py、domain/workflow.py | tests/test_ticket_workflow.py |
+| 健康检查、错误、CORS、日志和校验 | routers/health.py、exception_handlers.py、middleware.py、schemas.py | tests/test_http.py、tests/test_api_validation.py |
+| 数据持久化、事务与结构迁移 | db、models、alembic | tests/test_database.py |
+| asyncio 示例 | examples/async_io.py | tests/test_async_io.py |
+
+上表代码路径均相对于 `backend/`。ORM 映射 User、Ticket、Comment、Activity、UserAdminLog；业务修改与对应日志在同一事务提交。Repository 不提交事务，Service 负责提交与回滚。
+
+## 数据库和脚本
+
+`alembic/versions/001_five_tables.py` 创建五张业务表，`002_ticket_updated_at.py` 增加工单更新时间。迁移自包含，不读取当前 ORM 或示例 SQL 重建历史结构。应用不自动迁移或建表。
+
+`sql/01_schema.sql` 至 `06_crud.sql` 使用已有示例库名 `helpflow_stage4`，避免目录调整改变数据库目标。正式 API 使用配置中的数据库。集成测试沿用 `helpflow_stage5_test` 数据库前缀校验，必须显式设置 `HELPFLOW_TEST_DATABASE_URL`；未配置时跳过真实 MySQL 用例。
+
+## 文档入口
+
+- [需求确认](../requirements/confirmation.md) 与 [PRD](../requirements/prd.md)
+- [后端设计](backend.md) 与 [前端设计](frontend.md)
+- [数据库配置与迁移](../guides/database.md)
+- [认证与权限](../guides/security.md)
+- [工单操作与时间线](../guides/ticket-workflow.md)
+- [独立 SQL](../guides/sql.md) 与 [asyncio 示例](../guides/async-io.md)
+
+`decisions/` 保存按主题命名的历史设计。部分指南保留早期接口示例，文首已标注其版本限制；当前认证和工单行为以对应业务指南及代码为准。

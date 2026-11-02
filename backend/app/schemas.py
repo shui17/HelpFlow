@@ -3,7 +3,7 @@ from typing import Generic, Literal, Self, TypeVar
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
-from practice.stage1_helpflow.enums import (
+from app.domain.enums import (
     TicketPriority,
     TicketStatus,
     UserRole,
@@ -183,7 +183,7 @@ class TicketRead(BaseModel):
     closed_at: datetime | None = None
 
 
-# 保留阶段二名称，方便对照旧指南，两个名称指向同一个模型。
+# 保留接口模型的兼容别名，两个名称指向同一个模型。
 TicketCreateRequest = TicketCreate
 TicketResponse = TicketRead
 

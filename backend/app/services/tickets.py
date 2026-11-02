@@ -8,12 +8,12 @@ from app.models import Activity, Comment, Ticket, User
 from app.repositories.tickets import TicketRepository
 from app.repositories.users import UserRepository
 from app.errors import AppError
-from practice.stage1_helpflow.enums import TicketPriority, TicketStatus
-from practice.stage1_helpflow.exceptions import (
+from app.domain.enums import TicketPriority, TicketStatus
+from app.domain.exceptions import (
     InvalidStatusTransitionError, InvalidTicketDataError, TicketNotEditableError,
     TicketNotFoundError, UserNotFoundError,
 )
-from practice.stage1_helpflow.services import ALLOWED_STATUS_TRANSITIONS
+from app.domain.workflow import ALLOWED_STATUS_TRANSITIONS
 
 
 class TicketService:

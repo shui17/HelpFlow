@@ -29,7 +29,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(
         title=settings.app_name,
-        description="阶段 6：JWT 身份认证与权限控制",
+        description="HelpFlow 客服工单、身份认证与权限管理",
         version="0.6.0",
         lifespan=lifespan,
     )

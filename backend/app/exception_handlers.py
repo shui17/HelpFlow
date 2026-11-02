@@ -8,7 +8,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from app.errors import AppError
 
-from practice.stage1_helpflow.exceptions import (
+from app.domain.exceptions import (
     InvalidStatusTransitionError,
     InvalidTicketDataError,
     InvalidUserDataError,

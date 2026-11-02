@@ -6,7 +6,7 @@ from app.errors import AppError
 from app.models import Ticket, User, UserAdminLog
 from app.repositories.users import UserRepository
 from app.security import hash_password, verify_password
-from practice.stage1_helpflow.exceptions import InvalidUserDataError, UserNotFoundError
+from app.domain.exceptions import InvalidUserDataError, UserNotFoundError
 
 
 class UserService:

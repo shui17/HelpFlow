@@ -15,6 +15,6 @@ def health_check() -> ApiResponse[HealthRead]:
 
 @legacy_router.get("/health", response_model=HealthRead)
 def legacy_health_check() -> HealthRead:
-    """保留阶段二的健康检查地址及响应。"""
+    """保留兼容的健康检查地址及响应。"""
 
     return HealthRead()
