@@ -1,0 +1,12 @@
+import request from '../utils/request.js'
+export const getTickets = (params) => request.get('/tickets', { params })
+export const getTicketDetail = (id) => request.get(`/tickets/${id}`)
+export const createTicket = (data) => request.post('/tickets', data)
+export const updateTicket = (id, data) => request.patch(`/tickets/${id}`, data)
+export const cancelTicket = (id) => request.post(`/tickets/${id}/cancel`)
+export const claimTicket = (id) => request.post(`/tickets/${id}/claim`)
+export const assignTicket = (id, assignee_id) => request.post(`/tickets/${id}/assign`, { assignee_id })
+export const changeTicketStatus = (id, status) => request.patch(`/tickets/${id}/status`, { status })
+export const getTicketComments = (id, params) => request.get(`/tickets/${id}/comments`, { params })
+export const createTicketComment = (id, content) => request.post(`/tickets/${id}/comments`, { content })
+export const getTicketActivities = (id, params) => request.get(`/tickets/${id}/activities`, { params })

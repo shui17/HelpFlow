@@ -1,0 +1,60 @@
+import { createApp } from 'vue'
+import { createPinia } from 'pinia'
+import { ElAlert } from 'element-plus/es/components/alert/index.mjs'
+import { ElButton } from 'element-plus/es/components/button/index.mjs'
+import { ElConfigProvider } from 'element-plus/es/components/config-provider/index.mjs'
+import { ElDescriptions } from 'element-plus/es/components/descriptions/index.mjs'
+import { ElDescriptionsItem } from 'element-plus/es/components/descriptions/index.mjs'
+import { ElDialog } from 'element-plus/es/components/dialog/index.mjs'
+import { ElEmpty } from 'element-plus/es/components/empty/index.mjs'
+import { ElForm } from 'element-plus/es/components/form/index.mjs'
+import { ElFormItem } from 'element-plus/es/components/form/index.mjs'
+import { ElInput } from 'element-plus/es/components/input/index.mjs'
+import { ElOption } from 'element-plus/es/components/select/index.mjs'
+import { ElPagination } from 'element-plus/es/components/pagination/index.mjs'
+import { ElResult } from 'element-plus/es/components/result/index.mjs'
+import { ElSelect } from 'element-plus/es/components/select/index.mjs'
+import { ElSkeleton } from 'element-plus/es/components/skeleton/index.mjs'
+import { ElTable } from 'element-plus/es/components/table/index.mjs'
+import { ElTableColumn } from 'element-plus/es/components/table/index.mjs'
+import { ElTag } from 'element-plus/es/components/tag/index.mjs'
+import { ElTimeline } from 'element-plus/es/components/timeline/index.mjs'
+import { ElTimelineItem } from 'element-plus/es/components/timeline/index.mjs'
+import 'element-plus/es/components/alert/style/css'
+import 'element-plus/es/components/button/style/css'
+import 'element-plus/es/components/descriptions/style/css'
+import 'element-plus/es/components/descriptions-item/style/css'
+import 'element-plus/es/components/dialog/style/css'
+import 'element-plus/es/components/empty/style/css'
+import 'element-plus/es/components/form/style/css'
+import 'element-plus/es/components/form-item/style/css'
+import 'element-plus/es/components/input/style/css'
+import 'element-plus/es/components/option/style/css'
+import 'element-plus/es/components/pagination/style/css'
+import 'element-plus/es/components/result/style/css'
+import 'element-plus/es/components/select/style/css'
+import 'element-plus/es/components/skeleton/style/css'
+import 'element-plus/es/components/table/style/css'
+import 'element-plus/es/components/table-column/style/css'
+import 'element-plus/es/components/tag/style/css'
+import 'element-plus/es/components/timeline/style/css'
+import 'element-plus/es/components/timeline-item/style/css'
+import 'element-plus/es/components/message/style/css'
+import 'element-plus/es/components/message-box/style/css'
+import './assets/styles/global.css'
+import './assets/styles/polish.css'
+import App from './App.vue'
+import router from './router/index.js'
+import { onUnauthorized } from './utils/request.js'
+import { useAuthStore } from './stores/auth.js'
+
+const app = createApp(App)
+const pinia = createPinia()
+app.use(pinia)
+onUnauthorized(() => {
+  useAuthStore(pinia).logout()
+  const route = router.currentRoute.value
+  if (route.meta.requiresAuth) router.replace({ path: '/login', query: { redirect: route.fullPath } })
+})
+for (const component of [ElAlert, ElButton, ElConfigProvider, ElDescriptions, ElDescriptionsItem, ElDialog, ElEmpty, ElForm, ElFormItem, ElInput, ElOption, ElPagination, ElResult, ElSelect, ElSkeleton, ElTable, ElTableColumn, ElTag, ElTimeline, ElTimelineItem]) app.component(component.name, component)
+app.use(router).mount('#app')
