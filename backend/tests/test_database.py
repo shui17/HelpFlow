@@ -8,7 +8,7 @@ from uuid import uuid4
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import event, func, inspect, select
+from sqlalchemy import event, func, inspect, select, text
 from sqlalchemy.engine import make_url
 
 from app.config import Settings
@@ -122,6 +122,20 @@ def test_rollback_after_flush_and_concurrent_sessions(database_url):
 
 
 def test_migration_field_roundtrip_and_metadata(database_url):
+    # 迁移回退使用全新的独立库，避免现有内部备注被有损降级为公开回复。
+    original_url = make_url(database_url)
+    migration_name = 'helpflow_stage5_test_migration_' + uuid4().hex[:12]
+    database_url = original_url.set(database=migration_name).render_as_string(hide_password=False)
+    async def schema(create):
+        engine, _ = create_database(original_url.render_as_string(hide_password=False))
+        try:
+            async with engine.begin() as connection:
+                await connection.execute(text(
+                    f"CREATE DATABASE `{migration_name}` CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci"
+                    if create else f"DROP DATABASE `{migration_name}`"))
+        finally:
+            await engine.dispose()
+    asyncio.run(schema(True))
     env = os.environ | {"HELPFLOW_DATABASE_URL": database_url}
     def migrate(*args):
         subprocess.run([sys.executable, "-m", "alembic", *args], cwd=ROOT, env=env, check=True)
@@ -133,9 +147,13 @@ def test_migration_field_roundtrip_and_metadata(database_url):
         finally:
             await engine.dispose()
     try:
-        migrate("downgrade", "001_five_tables")
-        assert "updated_at" not in asyncio.run(columns())
-    finally:
         migrate("upgrade", "head")
-    assert "updated_at" in asyncio.run(columns())
-    migrate("check")
+        try:
+            migrate("downgrade", "001_five_tables")
+            assert "updated_at" not in asyncio.run(columns())
+        finally:
+            migrate("upgrade", "head")
+        assert "updated_at" in asyncio.run(columns())
+        migrate("check")
+    finally:
+        asyncio.run(schema(False))

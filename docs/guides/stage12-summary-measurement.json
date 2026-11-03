@@ -1,0 +1,174 @@
+{
+  "tickets": 250,
+  "role": "user",
+  "rounds": 5,
+  "method": "In-process TestClient HTTP; response bodies exclude headers and compression",
+  "baseline": [
+    {
+      "requests": 3,
+      "response_body_bytes": 184391,
+      "elapsed_ms": 22.84,
+      "counts": {
+        "in_progress": 63,
+        "open": 63,
+        "closed": 62,
+        "resolved": 62
+      }
+    },
+    {
+      "requests": 3,
+      "response_body_bytes": 184391,
+      "elapsed_ms": 22.119,
+      "counts": {
+        "in_progress": 63,
+        "open": 63,
+        "closed": 62,
+        "resolved": 62
+      }
+    },
+    {
+      "requests": 3,
+      "response_body_bytes": 184391,
+      "elapsed_ms": 16.263,
+      "counts": {
+        "in_progress": 63,
+        "open": 63,
+        "closed": 62,
+        "resolved": 62
+      }
+    },
+    {
+      "requests": 3,
+      "response_body_bytes": 184391,
+      "elapsed_ms": 20.898,
+      "counts": {
+        "in_progress": 63,
+        "open": 63,
+        "closed": 62,
+        "resolved": 62
+      }
+    },
+    {
+      "requests": 3,
+      "response_body_bytes": 184391,
+      "elapsed_ms": 20.443,
+      "counts": {
+        "in_progress": 63,
+        "open": 63,
+        "closed": 62,
+        "resolved": 62
+      }
+    }
+  ],
+  "aggregate": [
+    {
+      "requests": 1,
+      "response_body_bytes": 3841,
+      "elapsed_ms": 5.341,
+      "counts": {
+        "open": 63,
+        "in_progress": 63,
+        "resolved": 62,
+        "closed": 62
+      }
+    },
+    {
+      "requests": 1,
+      "response_body_bytes": 3841,
+      "elapsed_ms": 5.012,
+      "counts": {
+        "open": 63,
+        "in_progress": 63,
+        "resolved": 62,
+        "closed": 62
+      }
+    },
+    {
+      "requests": 1,
+      "response_body_bytes": 3841,
+      "elapsed_ms": 10.089,
+      "counts": {
+        "open": 63,
+        "in_progress": 63,
+        "resolved": 62,
+        "closed": 62
+      }
+    },
+    {
+      "requests": 1,
+      "response_body_bytes": 3841,
+      "elapsed_ms": 5.459,
+      "counts": {
+        "open": 63,
+        "in_progress": 63,
+        "resolved": 62,
+        "closed": 62
+      }
+    },
+    {
+      "requests": 1,
+      "response_body_bytes": 3841,
+      "elapsed_ms": 5.164,
+      "counts": {
+        "open": 63,
+        "in_progress": 63,
+        "resolved": 62,
+        "closed": 62
+      }
+    }
+  ],
+  "median_ms": {
+    "baseline": 20.898,
+    "aggregate": 5.341
+  },
+  "explain": {
+    "counts": [
+      {
+        "id": 1,
+        "select_type": "SIMPLE",
+        "table": "tickets",
+        "partitions": null,
+        "type": "ref",
+        "possible_keys": "ix_tickets_creator_created,ix_tickets_assignee_status_created,ix_tickets_status",
+        "key": "ix_tickets_creator_created",
+        "key_len": "8",
+        "ref": "const",
+        "rows": 250,
+        "filtered": 100.0,
+        "Extra": "Using temporary"
+      }
+    ],
+    "unassigned": [
+      {
+        "id": 1,
+        "select_type": "SIMPLE",
+        "table": "tickets",
+        "partitions": null,
+        "type": "ref",
+        "possible_keys": "ix_tickets_creator_created,ix_tickets_assignee_status_created,ix_tickets_status",
+        "key": "ix_tickets_assignee_status_created",
+        "key_len": "91",
+        "ref": "const,const",
+        "rows": 69,
+        "filtered": 89.29,
+        "Extra": "Using index condition; Using where"
+      }
+    ],
+    "recent": [
+      {
+        "id": 1,
+        "select_type": "SIMPLE",
+        "table": "tickets",
+        "partitions": null,
+        "type": "ref",
+        "possible_keys": "ix_tickets_creator_created",
+        "key": "ix_tickets_creator_created",
+        "key_len": "8",
+        "ref": "const",
+        "rows": 250,
+        "filtered": 100.0,
+        "Extra": "Using filesort"
+      }
+    ]
+  }
+}

@@ -18,6 +18,7 @@ export const routes = [
     protectedRoute('admin/tickets', tickets, '全部工单', ['admin']),
     protectedRoute('admin/users', () => import('../views/UserManagementView.vue'), '用户管理', ['admin']),
     protectedRoute('profile', () => import('../views/ProfileView.vue'), '个人中心'),
+    protectedRoute('notifications', () => import('../views/NotificationsView.vue'), '站内通知'),
     protectedRoute('change-password', () => import('../views/ChangePasswordView.vue'), '修改密码'),
   ] },
   { path: '/403', component: () => import('../views/ErrorView.vue'), meta: { title: '无访问权限', status: '403' } },

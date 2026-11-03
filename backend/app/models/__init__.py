@@ -1,4 +1,4 @@
-"""五表映射；关系禁止隐式 IO，查询时显式预加载。"""
+"""业务表与通知映射；关系禁止隐式 IO，查询时显式预加载。"""
 
 from datetime import datetime
 
@@ -72,9 +72,12 @@ class Comment(CreatedMixin, Base):
     ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
     content: Mapped[str] = mapped_column(Text)
+    visibility: Mapped[str] = mapped_column(String(20), default="public", server_default="public")
     ticket: Mapped[Ticket] = relationship(back_populates="comments", lazy="raise")
     author: Mapped[User] = relationship(lazy="raise")
     __table_args__ = (
+        CheckConstraint("visibility IN ('public', 'internal')", name="ck_comments_visibility"),
+        Index("ix_comments_visibility_id", "ticket_id", "visibility", "id"),
         CheckConstraint("CHAR_LENGTH(TRIM(content)) BETWEEN 1 AND 2000", name="ck_comments_content"),
         Index("ix_comments_ticket_created", "ticket_id", "created_at", "id"),
         Index("ix_comments_author", "author_id"), TABLE_OPTIONS,
@@ -97,7 +100,7 @@ class Activity(CreatedMixin, Base):
     old_assignee: Mapped[User | None] = relationship(foreign_keys=[old_assignee_id], lazy="raise")
     new_assignee: Mapped[User | None] = relationship(foreign_keys=[new_assignee_id], lazy="raise")
     __table_args__ = (
-        CheckConstraint("action IN ('created', 'updated', 'cancelled', 'claimed', 'assigned', 'reassigned', 'status_changed', 'reopened', 'closed')", name="ck_activity_action"),
+        CheckConstraint("action IN ('created', 'updated', 'cancelled', 'claimed', 'assigned', 'reassigned', 'transferred', 'status_changed', 'reopened', 'closed')", name="ck_activity_action"),
         CheckConstraint("old_status IN ('open', 'in_progress', 'resolved', 'closed')", name="ck_activity_old_status"),
         CheckConstraint("new_status IN ('open', 'in_progress', 'resolved', 'closed')", name="ck_activity_new_status"),
         Index("ix_activity_ticket_created", "ticket_id", "created_at", "id"),
@@ -126,4 +129,20 @@ class UserAdminLog(CreatedMixin, Base):
         CheckConstraint("new_is_active IN (0, 1)", name="ck_admin_new_active"),
         Index("ix_admin_target_created", "target_user_id", "created_at", "id"),
         Index("ix_admin_operator", "operator_id"), Index("ix_admin_action", "action"), TABLE_OPTIONS,
+    )
+
+
+class Notification(CreatedMixin, Base):
+    __tablename__ = "notifications"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    recipient_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
+    event_key: Mapped[str] = mapped_column(String(80))
+    message: Mapped[str] = mapped_column(String(200))
+    read_at: Mapped[datetime | None] = mapped_column(UTCDateTime())
+    __table_args__ = (
+        UniqueConstraint("event_key", "recipient_id", name="uq_notifications_event_recipient"),
+        Index("ix_notifications_recipient_id", "recipient_id", "id"),
+        Index("ix_notifications_recipient_read", "recipient_id", "read_at", "id"),
+        Index("ix_notifications_ticket", "ticket_id"), TABLE_OPTIONS,
     )

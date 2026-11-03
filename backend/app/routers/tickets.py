@@ -13,6 +13,8 @@ from app.schemas import (
     TicketCreate,
     TicketSummary,
     TicketAssignRequest,
+    TicketTransferRequest,
+    AgentOption,
     TicketRead,
     TicketStatusUpdateRequest,
     TicketUpdate,
@@ -98,6 +100,14 @@ async def ticket_summary(service: TicketServiceDependency, user: CurrentUser):
     return ApiResponse(data=TicketSummary.model_validate(await service.summary(actor=user)))
 
 
+@router.get("/agents", response_model=ApiResponse[list[AgentOption]])
+async def agent_options(service: TicketServiceDependency, user: CurrentUser,
+                        keyword: Annotated[str | None, Query(max_length=30)] = None,
+                        limit: PageSize = 30):
+    rows = await service.list_agents(actor=user, keyword=keyword, limit=limit)
+    return ApiResponse(data=[AgentOption.model_validate(row) for row in rows])
+
+
 @router.get(
     "/{ticket_id}",
     response_model=ApiResponse[TicketRead],
@@ -171,6 +181,27 @@ async def list_activities(ticket_id: TicketId, service: TicketServiceDependency,
                           user: CurrentUser, before_id: BeforeId = None, limit: PageSize = 50) -> ApiResponse[list[ActivityResponse]]:
     activities = await service.list_activities(ticket_id, actor=user, before_id=before_id, limit=limit)
     return ApiResponse(data=[ActivityResponse.model_validate(row) for row in activities])
+
+
+@router.post("/{ticket_id}/transfer", response_model=ApiResponse[TicketRead])
+async def transfer_ticket(ticket_id: TicketId, payload: TicketTransferRequest,
+                          service: TicketServiceDependency, user: CurrentUser):
+    row = await service.transfer_ticket(ticket_id, payload.assignee_id, payload.reason, actor=user)
+    return ApiResponse(data=TicketRead.model_validate(row))
+
+
+@router.get("/{ticket_id}/notes", response_model=ApiResponse[list[CommentResponse]])
+async def list_notes(ticket_id: TicketId, service: TicketServiceDependency,
+                     user: CurrentUser, before_id: BeforeId = None, limit: PageSize = 50):
+    rows = await service.list_notes(ticket_id, actor=user, before_id=before_id, limit=limit)
+    return ApiResponse(data=[CommentResponse.model_validate(row) for row in rows])
+
+
+@router.post("/{ticket_id}/notes", response_model=ApiResponse[CommentResponse], status_code=201)
+async def create_note(ticket_id: TicketId, payload: CommentCreateRequest,
+                      service: TicketServiceDependency, user: CurrentUser):
+    row = await service.add_note(ticket_id, payload.content, actor=user)
+    return ApiResponse(data=CommentResponse.model_validate(row))
 
 
 @router.post(

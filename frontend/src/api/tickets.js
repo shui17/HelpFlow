@@ -10,3 +10,7 @@ export const changeTicketStatus = (id, status) => request.patch(`/tickets/${id}/
 export const getTicketComments = (id, params) => request.get(`/tickets/${id}/comments`, { params })
 export const createTicketComment = (id, content) => request.post(`/tickets/${id}/comments`, { content })
 export const getTicketActivities = (id, params) => request.get(`/tickets/${id}/activities`, { params })
+export const transferTicket = (id, assignee_id, reason) => request.post(`/tickets/${id}/transfer`, { assignee_id, reason })
+export const getAgents = (keyword) => request.get('/tickets/agents', { params: { keyword } })
+export const getTicketNotes = (id, params) => request.get(`/tickets/${id}/notes`, { params })
+export const createTicketNote = (id, content) => request.post(`/tickets/${id}/notes`, { content })

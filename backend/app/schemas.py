@@ -153,13 +153,23 @@ class TicketAssignRequest(RequestModel):
     assignee_id: int = Field(gt=0, le=9_223_372_036_854_775_807)
 
 
+class TicketTransferRequest(TicketAssignRequest):
+    reason: str = Field(min_length=1, max_length=500)
+
+
+class AgentOption(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    username: str
+
+
 class ActivityResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     ticket_id: int
     action: Literal["created", "updated", "cancelled", "claimed", "assigned", "reassigned",
-                    "status_changed", "reopened", "closed"]
+                    "transferred", "status_changed", "reopened", "closed"]
     operator_id: int
     old_status: TicketStatus | None
     new_status: TicketStatus | None
@@ -228,3 +238,12 @@ class TicketCounts(BaseModel):
 class TicketSummary(BaseModel):
     counts: TicketCounts
     recent: list[TicketRead]
+
+
+class NotificationResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    ticket_id: int
+    message: str
+    read_at: datetime | None
+    created_at: datetime

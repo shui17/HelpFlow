@@ -8,6 +8,8 @@ export function ticketPermissions(ticket, user) {
     edit: owner && unassigned,
     claim: user.role === 'agent' && unassigned,
     assign: user.role === 'admin' && ticket.status !== 'closed',
+    transfer: agent && ticket.status !== 'closed',
+    notes: agent || user.role === 'admin',
     reply: (owner || agent) && ticket.status !== 'closed',
     start: agent && ticket.status === 'open',
     resolve: agent && ticket.status === 'in_progress',

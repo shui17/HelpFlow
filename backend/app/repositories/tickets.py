@@ -81,8 +81,8 @@ class TicketRepository:
         )
         return list(rows), total
 
-    async def list_comments(self, ticket_id: int, *, before_id=None, limit=50) -> list[Comment]:
-        query = select(Comment).where(Comment.ticket_id == ticket_id)
+    async def list_comments(self, ticket_id: int, *, before_id=None, limit=50, visibility="public") -> list[Comment]:
+        query = select(Comment).where(Comment.ticket_id == ticket_id, Comment.visibility == visibility)
         if before_id is not None:
             query = query.where(Comment.id < before_id)
         rows = await self.session.scalars(query.options(selectinload(Comment.author))

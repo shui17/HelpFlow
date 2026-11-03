@@ -92,3 +92,13 @@ flowchart TD
 - `frontend/src/views/SessionUnavailableView.vue`：临时网络或服务端故障时保留会话并支持重试。
 - `backend/tests/test_api_hardening.py`、`test_ticket_queries.py`：边界参数、限流、数据库筛选权限与稳定游标验证。
 - `.github/workflows/ci.yml`、`frontend/e2e/workflow.spec.js`：包含独立 MySQL 的自动回归和三角色浏览器流程。
+
+## 阶段12协作与通知
+
+- `backend/alembic/versions/003_collaboration.py`：备注可见性、转交活动类型与通知表迁移，阻止内部备注有损回退。
+- `backend/app/services/tickets.py`：负责客服转交、备注权限与分配/回复通知，业务写入共用事务。
+- `backend/app/services/notifications.py`、`routers/notifications.py`：事件与接收人去重、本人的通知列表、未读数和幂等已读。
+- `frontend/src/components/InternalNotes.vue`、`views/NotificationsView.vue`：内部备注及通知界面；工单详情增加转交弹窗。
+- `backend/tests/test_stage12.py`：内部信息隔离、转交竞争、异常回滚、通知幂等；浏览器回归增加两名客服的转交闭环。
+- `backend/scripts/benchmark_summary.py`：隔离测试库中的分页与聚合实测及 EXPLAIN 导出。
+- [阶段12运行与验证](../guides/stage12-collaboration.md)、[升级需求](../upgrades/v1.1-collaboration-requirements.md)。

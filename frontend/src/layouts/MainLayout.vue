@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
+import { getUnreadCount } from '../api/notifications.js'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth.js'
 import { roles, homePath } from '../constants/index.js'
@@ -8,10 +9,19 @@ const auth = useAuthStore()
 const route = useRoute()
 const router = useRouter()
 const collapsed = ref(false)
+const unread = ref(0)
+let poll
+async function refreshUnread() {
+  if (!auth.isAuthenticated) return
+  try { unread.value = await getUnreadCount() } catch { /* 下次轮询重试，列表页提供错误提示。 */ }
+}
+onMounted(() => { refreshUnread(); poll = setInterval(refreshUnread, 30000); window.addEventListener('notifications-read', refreshUnread) })
+onUnmounted(() => { clearInterval(poll); window.removeEventListener('notifications-read', refreshUnread) })
 const menus = computed(() => [
   [homePath(auth.role), auth.role === 'agent' ? '工作台' : '概览', 'grid'],
   ...({ user: [['/user/tickets', '我的工单', 'ticket'], ['/user/tickets/create', '创建工单', 'plus']], agent: [['/agent/tickets/unassigned', '待领取工单', 'ticket'], ['/agent/tickets/mine', '我负责的工单', 'check']], admin: [['/admin/tickets', '全部工单', 'ticket'], ['/admin/users', '用户管理', 'users']] }[auth.role] || []),
   ['/profile', '个人中心', 'user'],
+  ['/notifications', `站内通知${unread.value ? ` (${unread.value})` : ''}`, 'ticket'],
 ])
 function logout() { auth.logout(); router.replace('/login') }
 </script>

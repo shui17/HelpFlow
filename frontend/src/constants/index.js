@@ -6,3 +6,4 @@ export const statusColors = { open: 'info', in_progress: 'primary', resolved: 's
 export const priorityColors = { low: 'info', normal: '', high: 'warning', urgent: 'danger' }
 export const actions = { created: '创建工单', updated: '编辑工单', cancelled: '撤销工单', claimed: '领取工单', assigned: '分配工单', reassigned: '重新分配', status_changed: '状态变更', reopened: '重新打开', closed: '关闭工单' }
 export const homePath = (role) => `/${['user', 'agent', 'admin'].includes(role) ? role : 'user'}/dashboard`
+actions.transferred = '转交工单'

@@ -22,11 +22,13 @@ async def seed():
         async with factory() as session:
             admin = await UserRepository(session).find_by_email("browser-admin@example.com")
             await session.commit()
-            agent = await UserRepository(session).find_by_email("browser-agent@example.com")
-            await session.commit()
-            if agent is None:
-                agent = await UserService(session).create_user("浏览器客服", "browser-agent@example.com", password)
-                await UserService(session).manage_user(admin, agent.id, role="agent")
+            for name, email in (("浏览器客服", "browser-agent@example.com"),
+                                ("转交客服", "browser-agent2@example.com")):
+                agent = await UserRepository(session).find_by_email(email)
+                await session.commit()
+                if agent is None:
+                    agent = await UserService(session).create_user(name, email, password)
+                    await UserService(session).manage_user(admin, agent.id, role="agent")
     finally:
         await engine.dispose()
 

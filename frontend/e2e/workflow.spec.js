@@ -58,3 +58,55 @@ test('三角色工单闭环和临时故障会话恢复', async ({ page, browser 
   expect(errors).toEqual([])
   await agentContext.close(); await adminContext.close()
 })
+
+test('阶段12内部备注、转交和站内通知闭环', async ({ page, browser, request }) => {
+  const email = `collaboration-${Date.now()}@example.com`
+  const api = 'http://127.0.0.1:8011/api/v1'
+  const registration = await request.post(`${api}/auth/register`, { data: {
+    username: '协作用户', email, password, confirm_password: password,
+  } })
+  expect(registration.status()).toBe(201)
+  const session = await request.post(`${api}/auth/login`, { data: { email, password } })
+  const headers = { Authorization: `Bearer ${(await session.json()).data.access_token}` }
+  const created = await request.post(`${api}/tickets`, { headers, data: { title: '阶段12协作演示', description: '内部诊断与团队转交' } })
+  expect(created.status()).toBe(201)
+  const id = (await created.json()).data.id
+  await login(page, 'browser-agent@example.com')
+  await page.goto(`/agent/tickets/${id}`)
+  await page.getByRole('button', { name: '领取工单', exact: true }).click(); await confirm(page)
+  await page.getByLabel('添加内部备注', { exact: true }).fill('内部诊断：请二线客服接手')
+  await page.getByRole('button', { name: '保存内部备注', exact: true }).click()
+  await expect(page.getByText('内部诊断：请二线客服接手', { exact: true })).toBeVisible()
+  await page.getByRole('button', { name: '转交工单', exact: true }).click()
+  await page.getByRole('combobox', { name: '目标客服', exact: true }).fill('转交客服')
+  await page.getByRole('option', { name: /转交客服/ }).click()
+  await page.getByLabel('转交原因', { exact: true }).fill('交由二线跟进')
+  await page.getByRole('button', { name: '确认转交', exact: true }).click(); await confirm(page)
+  await expect(page).toHaveURL(/agent\/tickets\/mine$/)
+  await page.goto(`/agent/tickets/${id}`)
+  await expect(page.getByText('无权查看或操作该工单', { exact: true })).toBeVisible()
+  const secondContext = await browser.newContext()
+  try {
+    const second = await secondContext.newPage()
+    await login(second, 'browser-agent2@example.com')
+    await second.goto('/notifications')
+    await expect(second.getByText(`您有一张新分配或转交的工单 · #${id}`, { exact: true })).toBeVisible()
+    await second.getByRole('button', { name: '查看工单', exact: true }).first().click()
+    await expect(second).toHaveURL(new RegExp(`/agent/tickets/${id}$`))
+    await expect(second.getByText('内部诊断：请二线客服接手', { exact: true })).toBeVisible()
+    await second.getByRole('button', { name: '开始处理', exact: true }).click(); await confirm(second)
+    await second.getByLabel('添加回复', { exact: true }).fill('二线已经处理完成')
+    await second.getByRole('button', { name: '发送回复', exact: true }).click()
+    await expect(second.getByText('二线已经处理完成', { exact: true })).toBeVisible()
+    await second.getByRole('button', { name: '标记为已解决', exact: true }).click(); await confirm(second)
+    await page.getByRole('button', { name: '退出', exact: true }).click()
+    await login(page, email)
+    await page.goto('/notifications')
+    await expect(page.getByText(`您的工单有一条新的公开回复 · #${id}`, { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: '查看工单', exact: true }).first().click()
+    await expect(page.getByText('内部诊断：请二线客服接手', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('内部备注', { exact: true })).toHaveCount(0)
+    await page.getByRole('button', { name: '确认关闭', exact: true }).click(); await confirm(page)
+    await expect(page.getByText('工单已关闭，无法继续回复。', { exact: true })).toBeVisible()
+  } finally { await secondContext.close() }
+})

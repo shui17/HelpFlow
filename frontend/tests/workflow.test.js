@@ -36,7 +36,17 @@ describe('工单权限与合法流转入口', () => {
   })
   it('管理员只能分配，所有关闭工单均为只读', () => {
     expect(ticketPermissions(ticket, admin)).toMatchObject({ assign: true, reply: false, start: false, edit: false })
-    for (const actor of [user, agent, admin]) expect(Object.values(ticketPermissions({ ...ticket, status: 'closed', assignee_id: 2 }, actor)).every((value) => !value)).toBe(true)
+    for (const actor of [user, agent, admin]) {
+      const { notes, ...writes } = ticketPermissions({ ...ticket, status: 'closed', assignee_id: 2 }, actor)
+      expect(Object.values(writes).every((value) => !value)).toBe(true)
+      expect(notes).toBe(actor.role !== 'user')
+    }
+  })
+  it('转交与内部备注随当前负责人变化，普通用户不可见备注', () => {
+    const assigned = { ...ticket, assignee_id: agent.id }
+    expect(ticketPermissions(assigned, agent)).toMatchObject({ transfer: true, notes: true })
+    expect(ticketPermissions({ ...assigned, assignee_id: 9 }, agent)).toMatchObject({ transfer: false, notes: false, reply: false })
+    expect(ticketPermissions(assigned, user)).toMatchObject({ transfer: false, notes: false })
   })
 })
 describe('认证恢复', () => {

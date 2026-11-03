@@ -14,6 +14,7 @@ from app.domain.exceptions import (
     TicketNotFoundError, UserNotFoundError,
 )
 from app.domain.workflow import ALLOWED_STATUS_TRANSITIONS
+from app.services.notifications import enqueue
 
 
 class TicketService:
@@ -23,8 +24,15 @@ class TicketService:
         self.users = UserRepository(session)
 
     def _activity(self, ticket, actor, action, **values):
-        self.session.add(Activity(ticket_id=ticket.id, operator_id=actor.id,
-                                  action=action, **values))
+        activity = Activity(ticket_id=ticket.id, operator_id=actor.id, action=action, **values)
+        self.session.add(activity)
+        return activity
+
+    async def _assignment_notification(self, activity, ticket):
+        await self.session.flush()
+        await enqueue(self.session, event_key=f"activity:{activity.id}",
+                      recipient_id=ticket.assignee_id, ticket_id=ticket.id,
+                      message="您有一张新分配或转交的工单")
 
     async def _enabled_agent(self, user_id):
         # 与用户管理共用用户行锁，防止分配与禁用/降级交错。
@@ -135,9 +143,58 @@ class TicketService:
                 raise AppError(409, 40005, "该客服已经是工单负责人")
             previous = ticket.assignee_id
             ticket.assignee_id, ticket.assigned_at = assignee_id, utcnow()
-            self._activity(ticket, actor, "assigned" if previous is None else "reassigned",
+            activity = self._activity(ticket, actor, "assigned" if previous is None else "reassigned",
                            old_assignee_id=previous, new_assignee_id=assignee_id)
+            await self._assignment_notification(activity, ticket)
         return ticket
+
+    async def transfer_ticket(self, ticket_id, assignee_id, reason, *, actor):
+        if actor.role != "agent":
+            raise AppError(403, 40002, "只有当前负责客服可以转交工单")
+        if assignee_id == actor.id or not 1 <= len(reason.strip()) <= 500:
+            raise InvalidTicketDataError("请选择其他客服并填写 1 至 500 字的转交原因")
+        async with self.session.begin():
+            # 与领取、管理员分配保持用户行 -> 工单行的锁顺序。
+            await self._enabled_agent(assignee_id)
+            ticket = await self.get_ticket(ticket_id, lock=True)
+            if ticket.assignee_id != actor.id or ticket.status == "closed":
+                raise AppError(409, 40005, "工单已关闭或负责人已变化，请刷新")
+            previous = ticket.assignee_id
+            ticket.assignee_id, ticket.assigned_at = assignee_id, utcnow()
+            activity = self._activity(ticket, actor, "transferred", old_assignee_id=previous,
+                                      new_assignee_id=assignee_id, description=reason.strip())
+            await self._assignment_notification(activity, ticket)
+        return ticket
+
+    async def list_agents(self, *, actor, keyword=None, limit=30):
+        if actor.role not in ("agent", "admin"):
+            raise AppError(403, 40002, "无权查询客服目录")
+        query = select(User).where(User.role == "agent", User.is_active.is_(True))
+        if keyword and keyword.strip():
+            query = query.where(User.username.icontains(keyword.strip(), autoescape=True))
+        return list(await self.session.scalars(query.order_by(User.id).limit(limit)))
+
+    def check_internal(self, ticket, actor):
+        if actor.role != "admin" and not (actor.role == "agent" and ticket.assignee_id == actor.id):
+            raise AppError(403, 40002, "无权访问内部备注")
+
+    async def add_note(self, ticket_id, content, *, actor):
+        async with self.session.begin():
+            ticket = await self.get_ticket(ticket_id, lock=True)
+            self.check_internal(ticket, actor)
+            if ticket.status == "closed":
+                raise AppError(409, 40005, "已关闭工单不能新增内部备注")
+            if not 1 <= len(content.strip()) <= 2000:
+                raise InvalidTicketDataError("内部备注需要 1 至 2000 字")
+            note = await self.tickets.add_comment(Comment(ticket_id=ticket_id, author_id=actor.id,
+                                                        content=content.strip(), visibility="internal"))
+            ticket.updated_at = utcnow()
+        return note
+
+    async def list_notes(self, ticket_id, *, actor, before_id=None, limit=50):
+        ticket = await self.get_ticket(ticket_id)
+        self.check_internal(ticket, actor)
+        return await self.tickets.list_comments(ticket_id, before_id=before_id, limit=limit, visibility="internal")
 
     async def change_status(self, ticket_id, new_status: TicketStatus, *, actor):
         async with self.session.begin():
@@ -175,6 +232,10 @@ class TicketService:
                 ticket_id=ticket_id, author_id=author_id, content=content.strip()
             ))
             ticket.updated_at = utcnow()
+            recipient = ticket.assignee_id if actor.role == "user" else ticket.creator_id
+            if recipient is not None and recipient != actor.id:
+                await enqueue(self.session, event_key=f"comment:{comment.id}", recipient_id=recipient,
+                              ticket_id=ticket.id, message="您的工单有一条新的公开回复")
         return comment
 
     async def summary(self, *, actor):
@@ -186,4 +247,10 @@ class TicketService:
 
     async def list_activities(self, ticket_id, *, actor, before_id=None, limit=50):
         await self.get_visible_ticket(ticket_id, actor)
-        return await self.tickets.list_activities(ticket_id, before_id=before_id, limit=limit)
+        rows = await self.tickets.list_activities(ticket_id, before_id=before_id, limit=limit)
+        if actor.role == "user":
+            # 转交原因是内部协作信息，不能随时间线泄露给用户。
+            from app.schemas import ActivityResponse
+            return [ActivityResponse.model_validate(row).model_copy(update={"description": None})
+                    if row.action == "transferred" else row for row in rows]
+        return rows

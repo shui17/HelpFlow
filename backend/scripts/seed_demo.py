@@ -54,7 +54,7 @@ async def seed(settings, password):
                 elif user.role != role:
                     raise ValueError('既有演示账号角色不同，拒绝覆盖，请使用新的演示库')
                 users[email.split('@')[0]] = identity(user)
-            for title, target in [('演示：账号登录问题', 'open'), ('演示：支付结果未更新', 'in_progress'), ('演示：产品使用咨询', 'resolved')]:
+            for title, target in [('演示：账号登录问题', 'open'), ('演示：支付结果未更新', 'in_progress'), ('演示：产品使用咨询', 'resolved'), ('演示：客服协作转交', 'collaboration')]:
                 existing = await session.scalar(select(Ticket).where(Ticket.creator_id == users['user'].id, Ticket.title == title))
                 await session.rollback()
                 if existing is not None:
@@ -68,6 +68,10 @@ async def seed(settings, password):
                     await service.add_comment(ticket.id, users['agent1'].id, '正在检查问题，请补充发生时间。', actor=users['agent1'])
                 if target == 'resolved':
                     await service.change_status(ticket.id, TicketStatus.RESOLVED, actor=users['agent1'])
+                if target == 'collaboration':
+                    await service.add_note(ticket.id, '内部排查已完成，交由二线客服继续跟进。', actor=users['agent1'])
+                    await service.transfer_ticket(ticket.id, users['agent2'].id, '需要二线支持', actor=users['agent1'])
+                    await service.add_comment(ticket.id, users['agent2'].id, '已接手，我们将继续跟进。', actor=users['agent2'])
         return [(email, role) for _, email, role in ACCOUNTS]
     finally:
         await engine.dispose()
