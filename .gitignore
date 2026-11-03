@@ -22,6 +22,8 @@ htmlcov/
 # Package and build output
 build/
 dist/
+node_modules/
+.npm-cache/
 *.egg-info/
 .eggs/
 
@@ -43,3 +45,7 @@ dist/
 # Operating-system metadata
 .DS_Store
 Thumbs.db
+
+# Browser test output
+playwright-report/
+test-results/

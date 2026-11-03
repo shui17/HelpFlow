@@ -1,0 +1,65 @@
+name: Verify HelpFlow
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-root-password
+          MYSQL_DATABASE: helpflow_stage5_test_ci
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-root-password"
+          --health-interval=10s --health-timeout=5s --health-retries=10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      HELPFLOW_DATABASE_URL: mysql+asyncmy://root:ci-root-password@127.0.0.1:3306/helpflow_stage5_test_ci?charset=utf8mb4
+      HELPFLOW_JWT_SECRET_KEY: ci-only-browser-signing-key-0123456789abcdef
+      HELPFLOW_TEST_DATABASE_URL: mysql+asyncmy://root:ci-root-password@127.0.0.1:3306/helpflow_stage5_test_ci?charset=utf8mb4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: '3.14'
+      - run: uv sync --locked
+      - run: uv run pytest -q -rs
+      - run: uv run python -m tests.seed_browser
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+        working-directory: frontend
+      - run: npx playwright install --with-deps chromium
+        working-directory: frontend
+      - run: npm run test:e2e
+        working-directory: frontend
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-test-results
+          path: frontend/test-results
+          retention-days: 7
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npm test
+      - run: npm run build
