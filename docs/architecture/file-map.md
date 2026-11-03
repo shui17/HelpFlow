@@ -31,7 +31,7 @@ docs/
 ├── requirements/        # PRD 与需求确认
 ├── architecture/        # 前后端设计、文件职责与 decisions 历史设计
 └── guides/              # 按功能组织的操作指南
-frontend/                # 前端预留目录
+frontend/                # Vue 3 页面、共享组件、认证、路由和 API
 ```
 
 ## 业务与依赖
@@ -54,15 +54,16 @@ flowchart TD
 
 正式业务依赖 `app/domain`，状态流转表位于 `domain/workflow.py`。内存实现供示例和替换依赖的 HTTP 测试使用；正式 API 的 Service 不依赖内存实现。
 
-| 业务 | 主要入口与实现 | 验证 |
-| --- | --- | --- |
-| 注册、登录、当前用户、修改密码 | routers/auth.py、services/users.py、security.py | tests/test_security.py |
-| 用户查询、角色、启用状态与管理日志 | routers/users.py、services/users.py、repositories/users.py | tests/test_security.py |
-| 工单创建、筛选、分页与修改 | routers/tickets.py、services/tickets.py、repositories/tickets.py | tests/test_http.py、tests/test_api_validation.py、tests/test_database.py |
-| 领取、分配、撤销、流转、回复和时间线 | services/tickets.py、domain/workflow.py | tests/test_ticket_workflow.py |
-| 健康检查、错误、CORS、日志和校验 | routers/health.py、exception_handlers.py、middleware.py、schemas.py | tests/test_http.py、tests/test_api_validation.py |
-| 数据持久化、事务与结构迁移 | db、models、alembic | tests/test_database.py |
-| asyncio 示例 | examples/async_io.py | tests/test_async_io.py |
+
+| 业务                                 | 主要入口与实现                                                      | 验证                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| 注册、登录、当前用户、修改密码       | routers/auth.py、services/users.py、security.py                     | tests/test_security.py                                                   |
+| 用户查询、角色、启用状态与管理日志   | routers/users.py、services/users.py、repositories/users.py          | tests/test_security.py                                                   |
+| 工单创建、筛选、分页与修改           | routers/tickets.py、services/tickets.py、repositories/tickets.py    | tests/test_http.py、tests/test_api_validation.py、tests/test_database.py |
+| 领取、分配、撤销、流转、回复和时间线 | services/tickets.py、domain/workflow.py                             | tests/test_ticket_workflow.py                                            |
+| 健康检查、错误、CORS、日志和校验     | routers/health.py、exception_handlers.py、middleware.py、schemas.py | tests/test_http.py、tests/test_api_validation.py                         |
+| 数据持久化、事务与结构迁移           | db、models、alembic                                                 | tests/test_database.py                                                   |
+| asyncio 示例                         | examples/async_io.py                                                | tests/test_async_io.py                                                   |
 
 上表代码路径均相对于 `backend/`。ORM 映射 User、Ticket、Comment、Activity、UserAdminLog；业务修改与对应日志在同一事务提交。Repository 不提交事务，Service 负责提交与回滚。
 
@@ -82,3 +83,12 @@ flowchart TD
 - [独立 SQL](../guides/sql.md) 与 [asyncio 示例](../guides/async-io.md)
 
 `decisions/` 保存按主题命名的历史设计。部分指南保留早期接口示例，文首已标注其版本限制；当前认证和工单行为以对应业务指南及代码为准。
+
+## 审查修复补充（2026-11-03）
+
+- `app/pagination.py`：统一页码、每页数量、数据库 ID 的输入边界。
+- `app/rate_limit.py`：单进程 IP/账号滑动窗口限流，容量有界；多实例部署配置共享网关限流。
+- `repositories/tickets.py`：权限范围内的 SQL 筛选与统计、最近工单查询，以及回复和时间线的 `before_id` 游标分页。
+- `frontend/src/views/SessionUnavailableView.vue`：临时网络或服务端故障时保留会话并支持重试。
+- `backend/tests/test_api_hardening.py`、`test_ticket_queries.py`：边界参数、限流、数据库筛选权限与稳定游标验证。
+- `.github/workflows/ci.yml`、`frontend/e2e/workflow.spec.js`：包含独立 MySQL 的自动回归和三角色浏览器流程。

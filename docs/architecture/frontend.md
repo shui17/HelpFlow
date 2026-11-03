@@ -2,14 +2,15 @@
 
 ## 1 文档信息
 
-| 项目 | 内容 |
-| --- | --- |
-| 项目名称 | HelpFlow 客服工单管理系统 |
-| 文档类型 | 前端详细设计 |
-| 文档版本 | V1.0 |
-| 编写日期 | 2026-10-04 |
+
+| 项目     | 内容                                                                              |
+| ---------- | ----------------------------------------------------------------------------------- |
+| 项目名称 | HelpFlow 客服工单管理系统                                                         |
+| 文档类型 | 前端详细设计                                                                      |
+| 文档版本 | V1.0                                                                              |
+| 编写日期 | 2026-10-04                                                                        |
 | 上游文档 | `docs/requirements/confirmation.md`、`docs/requirements/docs/requirements/prd.md` |
-| 前端技术 | Vue 3、Vite、JavaScript、Vue Router、Pinia、Axios、Element Plus |
+| 前端技术 | Vue 3、Vite、JavaScript、Vue Router、Pinia、Axios、Element Plus                   |
 
 ## 2 文档目的
 
@@ -41,14 +42,15 @@
 
 ## 4 前端技术设计
 
-| 技术 | 使用方式 |
-| --- | --- |
-| Vue 3 | 使用 Composition API 和单文件组件 |
-| Vite | 创建项目、开发服务器和生产构建 |
-| JavaScript | 当前版本不使用 TypeScript |
-| Vue Router | 页面路由、登录守卫和角色守卫 |
-| Pinia | 只管理认证相关全局状态 |
-| Axios | 请求封装、Token 注入和响应错误处理 |
+
+| 技术         | 使用方式                                 |
+| -------------- | ------------------------------------------ |
+| Vue 3        | 使用 Composition API 和单文件组件        |
+| Vite         | 创建项目、开发服务器和生产构建           |
+| JavaScript   | 当前版本不使用 TypeScript                |
+| Vue Router   | 页面路由、登录守卫和角色守卫             |
+| Pinia        | 只管理认证相关全局状态                   |
+| Axios        | 请求封装、Token 注入和响应错误处理       |
 | Element Plus | 表单、表格、分页、标签、对话框和消息提示 |
 
 当前不引入额外 UI 框架、复杂图表库、CSS 预处理器和请求状态库。
@@ -279,26 +281,27 @@ Token 使用一个固定的 `localStorage` 键名。任何页面不得直接重�
 
 ### 11.1 路由表
 
-| 路径 | 页面 | 登录要求 | 角色 |
-| --- | --- | --- | --- |
-| `/login` | 登录 | 否 | 全部 |
-| `/register` | 注册 | 否 | 全部 |
-| `/profile` | 个人中心 | 是 | 全部 |
-| `/change-password` | 修改密码 | 是 | 全部 |
-| `/user/dashboard` | 用户概览 | 是 | `user` |
-| `/user/tickets` | 我的工单 | 是 | `user` |
-| `/user/tickets/create` | 创建工单 | 是 | `user` |
-| `/user/tickets/:id` | 用户工单详情 | 是 | `user` |
-| `/agent/dashboard` | 客服工作台 | 是 | `agent` |
-| `/agent/tickets/unassigned` | 待领取工单 | 是 | `agent` |
-| `/agent/tickets/mine` | 我负责的工单 | 是 | `agent` |
-| `/agent/tickets/:id` | 客服工单详情 | 是 | `agent` |
-| `/admin/dashboard` | 管理概览 | 是 | `admin` |
-| `/admin/tickets` | 全部工单 | 是 | `admin` |
-| `/admin/tickets/:id` | 管理员工单详情 | 是 | `admin` |
-| `/admin/users` | 用户管理 | 是 | `admin` |
-| `/403` | 无权限 | 否 | 全部 |
-| `/:pathMatch(.*)*` | 页面不存在 | 否 | 全部 |
+
+| 路径                        | 页面           | 登录要求 | 角色    |
+| ----------------------------- | ---------------- | ---------- | --------- |
+| `/login`                    | 登录           | 否       | 全部    |
+| `/register`                 | 注册           | 否       | 全部    |
+| `/profile`                  | 个人中心       | 是       | 全部    |
+| `/change-password`          | 修改密码       | 是       | 全部    |
+| `/user/dashboard`           | 用户概览       | 是       | `user`  |
+| `/user/tickets`             | 我的工单       | 是       | `user`  |
+| `/user/tickets/create`      | 创建工单       | 是       | `user`  |
+| `/user/tickets/:id`         | 用户工单详情   | 是       | `user`  |
+| `/agent/dashboard`          | 客服工作台     | 是       | `agent` |
+| `/agent/tickets/unassigned` | 待领取工单     | 是       | `agent` |
+| `/agent/tickets/mine`       | 我负责的工单   | 是       | `agent` |
+| `/agent/tickets/:id`        | 客服工单详情   | 是       | `agent` |
+| `/admin/dashboard`          | 管理概览       | 是       | `admin` |
+| `/admin/tickets`            | 全部工单       | 是       | `admin` |
+| `/admin/tickets/:id`        | 管理员工单详情 | 是       | `admin` |
+| `/admin/users`              | 用户管理       | 是       | `admin` |
+| `/403`                      | 无权限         | 否       | 全部    |
+| `/:pathMatch(.*)*`          | 页面不存在     | 否       | 全部    |
 
 ### 11.2 路由元信息
 
@@ -700,19 +703,19 @@ items               当前页数据
 
 ## 20 前端完成标准
 
-- [ ] 所有规划页面均可访问。
-- [ ] 未登录和角色越权路由被拦截。
-- [ ] Token 失效后能够返回登录页。
-- [ ] Axios 统一携带 Token 和处理通用错误。
-- [ ] 页面不直接硬编码 API 基础地址。
-- [ ] 三种角色只看到适合自己的菜单和按钮。
-- [ ] 工单列表具有分页、筛选、搜索和排序。
-- [ ] 工单详情具有信息、回复和时间线。
-- [ ] 危险操作具有二次确认。
-- [ ] 领取冲突能够提示并刷新数据。
-- [ ] 加载、空数据和错误状态完整。
-- [ ] 页面不依赖 Swagger 完成业务操作。
-- [ ] 常见笔记本分辨率下无明显布局错误。
+- [ ]  所有规划页面均可访问。
+- [ ]  未登录和角色越权路由被拦截。
+- [ ]  Token 失效后能够返回登录页。
+- [ ]  Axios 统一携带 Token 和处理通用错误。
+- [ ]  页面不直接硬编码 API 基础地址。
+- [ ]  三种角色只看到适合自己的菜单和按钮。
+- [ ]  工单列表具有分页、筛选、搜索和排序。
+- [ ]  工单详情具有信息、回复和时间线。
+- [ ]  危险操作具有二次确认。
+- [ ]  领取冲突能够提示并刷新数据。
+- [ ]  加载、空数据和错误状态完整。
+- [ ]  页面不依赖 Swagger 完成业务操作。
+- [ ]  常见笔记本分辨率下无明显布局错误。
 
 ## 21 与后端文档的边界
 
