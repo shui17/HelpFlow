@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, Request, status
 from app.dependencies import CurrentUser, get_user_service
 from app.schemas import ApiResponse, UserRegisterRequest, UserResponse, LoginRequest, PasswordChangeRequest, TokenResponse
 from app.security import create_access_token
+from app.rate_limit import check_auth_rate
 from app.services.users import UserService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -19,15 +20,18 @@ UserServiceDependency = Annotated[UserService, Depends(get_user_service)]
 async def register_user(
     payload: UserRegisterRequest,
     service: UserServiceDependency,
+    request: Request,
 ) -> ApiResponse[UserResponse]:
     """注册固定为普通用户，密码经 Argon2 哈希保存。"""
 
+    check_auth_rate(request, "register", str(payload.email))
     user = await service.create_user(username=payload.username, email=str(payload.email), password=payload.password)
     return ApiResponse(data=UserResponse.model_validate(user))
 
 
 @router.post("/login", response_model=ApiResponse[TokenResponse])
 async def login(payload: LoginRequest, service: UserServiceDependency, request: Request):
+    check_auth_rate(request, "login", str(payload.email))
     user = await service.authenticate(str(payload.email), payload.password)
     settings = request.app.state.settings
     return ApiResponse(data=TokenResponse(access_token=create_access_token(user, settings),

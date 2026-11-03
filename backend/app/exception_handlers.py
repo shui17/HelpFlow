@@ -48,7 +48,11 @@ def register_exception_handlers(app: FastAPI) -> None:
     @app.exception_handler(SQLAlchemyError)
     async def handle_database_error(request: Request, exc: SQLAlchemyError) -> JSONResponse:
         # 不记录原始 SQL、参数或驱动异常，避免连接信息及用户数据进入日志。
-        logger.error("database_error type=%s", type(exc).__name__)
+        original = getattr(exc, "orig", None)
+        args = getattr(original, "args", ())
+        db_code = args[0] if args and isinstance(args[0], int) else None
+        logger.error("database_error type=%s db_code=%s request_id=%s", type(exc).__name__,
+                     db_code, getattr(request.state, "request_id", "unknown"))
         return error_response(http_status=500, code=90001, message="系统暂时不可用")
 
     @app.exception_handler(StarletteHTTPException)

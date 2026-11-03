@@ -1,5 +1,6 @@
+from app.pagination import PageNumber, PageSize, EntityId
 from typing import Annotated
-from fastapi import APIRouter, Depends, Path, Query
+from fastapi import APIRouter, Depends, Query
 from app.dependencies import AdminUser, get_user_service
 from app.schemas import ApiResponse, PageData, UserResponse, UserRoleUpdate, UserStatusUpdate
 from app.services.users import UserService
@@ -7,13 +8,13 @@ from app.domain.enums import UserRole
 
 router = APIRouter(prefix="/users", tags=["users"])
 UserServiceDependency = Annotated[UserService, Depends(get_user_service)]
-UserId = Annotated[int, Path(gt=0)]
+UserId = EntityId
 
 
 @router.get("", response_model=ApiResponse[PageData[UserResponse]])
 async def list_users(admin: AdminUser, service: UserServiceDependency,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 10,
+    page: PageNumber = 1,
+    page_size: PageSize = 10,
     keyword: Annotated[str | None, Query(max_length=255)] = None,
     role: UserRole | None = None, is_active: bool | None = None):
     users, total = await service.list_users(page=page, page_size=page_size,

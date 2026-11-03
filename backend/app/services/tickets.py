@@ -8,7 +8,7 @@ from app.models import Activity, Comment, Ticket, User
 from app.repositories.tickets import TicketRepository
 from app.repositories.users import UserRepository
 from app.errors import AppError
-from app.domain.enums import TicketPriority, TicketStatus
+from app.domain.enums import TicketPriority, TicketStatus, TicketCategory
 from app.domain.exceptions import (
     InvalidStatusTransitionError, InvalidTicketDataError, TicketNotEditableError,
     TicketNotFoundError, UserNotFoundError,
@@ -60,7 +60,7 @@ class TicketService:
         self.check_view(ticket, actor)
         return ticket
 
-    async def create_ticket(self, title, description, creator_id, priority=TicketPriority.NORMAL, *, actor):
+    async def create_ticket(self, title, description, creator_id, priority=TicketPriority.NORMAL, *, actor, category=TicketCategory.OTHER):
         if actor.role != "user" or creator_id != actor.id:
             raise AppError(403, 40002, "只有普通用户可以创建自己的工单")
         async with self.session.begin():
@@ -69,25 +69,25 @@ class TicketService:
                 raise InvalidTicketDataError("工单标题和描述不能为空")
             ticket = await self.tickets.add(Ticket(
                 ticket_no=uuid4().hex, title=title.strip(), description=description.strip(),
-                creator_id=creator_id, priority=priority.value, category="other", status="open",
+                creator_id=creator_id, priority=priority.value, category=category.value, status="open",
             ))
             self._activity(ticket, actor, "created", new_status="open")
         return ticket
 
     async def list_tickets(self, *, actor, page=1, page_size=10, status=None, priority=None,
-                           keyword=None, sort_order="desc"):
-        if page < 1 or not 1 <= page_size <= 100 or sort_order not in ("asc", "desc"):
+                           keyword=None, sort_order="desc", category=None, scope=None, assignee_id=None, unassigned=False):
+        if not 1 <= page <= 1_000_000 or not 1 <= page_size <= 100 or sort_order not in ("asc", "desc"):
             raise InvalidTicketDataError("分页或排序参数无效")
         return await self.tickets.list(page=page, page_size=page_size, status=status,
-            priority=priority, keyword=keyword, sort_order=sort_order, actor=actor)
+            priority=priority, keyword=keyword, sort_order=sort_order, actor=actor, category=category, scope=scope, assignee_id=assignee_id, unassigned=unassigned)
 
-    async def update_ticket(self, ticket_id, *, actor, title=None, description=None, priority=None):
+    async def update_ticket(self, ticket_id, *, actor, title=None, description=None, priority=None, category=None):
         async with self.session.begin():
             ticket = await self.get_ticket(ticket_id, lock=True)
             self.check_owner(ticket, actor)
             if ticket.status != "open" or ticket.assignee_id is not None:
                 raise TicketNotEditableError("只有待处理且未分配的工单可以修改")
-            if title is None and description is None and priority is None:
+            if title is None and description is None and priority is None and category is None:
                 raise InvalidTicketDataError("至少提供一个需要修改的字段")
             new_title = ticket.title if title is None else title.strip()
             new_description = ticket.description if description is None else description.strip()
@@ -96,6 +96,8 @@ class TicketService:
             ticket.title, ticket.description = new_title, new_description
             if priority is not None:
                 ticket.priority = priority.value
+            if category is not None:
+                ticket.category = category.value
             self._activity(ticket, actor, "updated")
         return ticket
 
@@ -175,10 +177,13 @@ class TicketService:
             ticket.updated_at = utcnow()
         return comment
 
-    async def list_comments(self, ticket_id, *, actor):
-        await self.get_visible_ticket(ticket_id, actor)
-        return await self.tickets.list_comments(ticket_id)
+    async def summary(self, *, actor):
+        return await self.tickets.summary(actor)
 
-    async def list_activities(self, ticket_id, *, actor):
+    async def list_comments(self, ticket_id, *, actor, before_id=None, limit=50):
         await self.get_visible_ticket(ticket_id, actor)
-        return await self.tickets.list_activities(ticket_id)
+        return await self.tickets.list_comments(ticket_id, before_id=before_id, limit=limit)
+
+    async def list_activities(self, ticket_id, *, actor, before_id=None, limit=50):
+        await self.get_visible_ticket(ticket_id, actor)
+        return await self.tickets.list_activities(ticket_id, before_id=before_id, limit=limit)

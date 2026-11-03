@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 
 from app.domain.enums import (
     TicketPriority,
+    TicketCategory,
     TicketStatus,
     UserRole,
 )
@@ -113,6 +114,7 @@ class UserResponse(BaseModel):
     email: str
     role: UserRole
     is_active: bool
+    created_at: datetime | None = None
 
 
 class TicketCreate(RequestModel):
@@ -121,6 +123,7 @@ class TicketCreate(RequestModel):
     title: str = Field(min_length=1, max_length=200)
     description: str = Field(min_length=1, max_length=5000)
     priority: TicketPriority = TicketPriority.NORMAL
+    category: TicketCategory = TicketCategory.OTHER
 
 
 class TicketUpdate(RequestModel):
@@ -129,6 +132,7 @@ class TicketUpdate(RequestModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, min_length=1, max_length=5000)
     priority: TicketPriority | None = None
+    category: TicketCategory | None = None
 
     @model_validator(mode="after")
     def validate_changes(self) -> Self:
@@ -146,7 +150,7 @@ class TicketStatusUpdateRequest(RequestModel):
 
 
 class TicketAssignRequest(RequestModel):
-    assignee_id: int = Field(gt=0)
+    assignee_id: int = Field(gt=0, le=9_223_372_036_854_775_807)
 
 
 class ActivityResponse(BaseModel):
@@ -175,6 +179,7 @@ class TicketRead(BaseModel):
     description: str
     creator_id: int
     priority: TicketPriority
+    category: TicketCategory = TicketCategory.OTHER
     status: TicketStatus
     assignee_id: int | None
     created_at: datetime
@@ -208,3 +213,18 @@ class CommentResponse(BaseModel):
     author_id: int
     content: str
     created_at: datetime
+
+
+class TicketCounts(BaseModel):
+    open: int = 0
+    in_progress: int = 0
+    resolved: int = 0
+    closed: int = 0
+    unassigned: int = 0
+    users: int = 0
+    agents: int = 0
+
+
+class TicketSummary(BaseModel):
+    counts: TicketCounts
+    recent: list[TicketRead]

@@ -61,6 +61,7 @@ def test_register_normalizes_input_and_rejects_duplicate(client):
         "email": "learner@example.com",
         "role": "user",
         "is_active": True,
+        "created_at": None,
     }
     duplicate = client.post(
         "/api/v1/auth/register",

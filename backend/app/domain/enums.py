@@ -25,3 +25,11 @@ class TicketPriority(StrEnum):
     NORMAL = "normal"
     HIGH = "high"
     URGENT = "urgent"
+
+
+class TicketCategory(StrEnum):
+    ACCOUNT = "account"
+    PRODUCT = "product"
+    PAYMENT = "payment"
+    TECHNICAL = "technical"
+    OTHER = "other"

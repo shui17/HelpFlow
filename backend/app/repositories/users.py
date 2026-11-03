@@ -17,6 +17,8 @@ class UserRepository:
     async def add(self, user: User) -> User:
         self.session.add(user)
         await self.session.flush()
+        # MySQL DATETIME 精度为秒，返回与后续查询一致的持久化时间。
+        await self.session.refresh(user)
         return user
 
     async def list(self, *, page=1, page_size=10, keyword=None, role=None, is_active=None):

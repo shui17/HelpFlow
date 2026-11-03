@@ -20,6 +20,12 @@ class Settings(BaseSettings):
     jwt_secret_key: SecretStr | None = None
     jwt_access_token_expire_minutes: int = Field(default=120, ge=1, le=1440)
 
+    auth_rate_limit_enabled: bool = True
+    auth_rate_window_seconds: int = Field(default=60, ge=1, le=3600)
+    auth_login_ip_limit: int = Field(default=60, ge=1, le=10000)
+    auth_login_account_limit: int = Field(default=10, ge=1, le=1000)
+    auth_register_ip_limit: int = Field(default=10, ge=1, le=1000)
+
     def signing_key(self) -> str:
         value = self.jwt_secret_key.get_secret_value() if self.jwt_secret_key else ""
         if len(value.encode("utf-8")) < 32 or value == "replace_with_a_long_random_value":

@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import Settings
+from app.rate_limit import AuthRateLimiter
 from app.db.session import create_database
 from app.exception_handlers import register_exception_handlers
 from app.middleware import register_request_logging
@@ -34,6 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.settings = settings
+    application.state.auth_rate_limiter = AuthRateLimiter()
     application.state.engine, application.state.session_factory = create_database(
         settings.database_url.get_secret_value()
     )
@@ -45,7 +47,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PATCH"],
         allow_headers=["Content-Type", "Authorization"],
-        expose_headers=["X-Process-Time"],
+        expose_headers=["X-Process-Time", "X-Request-ID", "Retry-After"],
     )
 
     register_exception_handlers(application)

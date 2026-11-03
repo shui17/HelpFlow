@@ -1,6 +1,7 @@
+from app.pagination import PageNumber, PageSize, EntityId, BeforeId
 from typing import Annotated, Literal
 
-from fastapi import APIRouter, Depends, Path, Query, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.dependencies import CurrentUser, get_ticket_service
 from app.schemas import (
@@ -10,18 +11,19 @@ from app.schemas import (
     CommentResponse,
     PageData,
     TicketCreate,
+    TicketSummary,
     TicketAssignRequest,
     TicketRead,
     TicketStatusUpdateRequest,
     TicketUpdate,
 )
-from app.domain.enums import TicketPriority, TicketStatus
+from app.domain.enums import TicketPriority, TicketStatus, TicketCategory
 from app.services.tickets import TicketService
 
 router = APIRouter(prefix="/tickets", tags=["tickets"])
 
 TicketServiceDependency = Annotated[TicketService, Depends(get_ticket_service)]
-TicketId = Annotated[int, Path(gt=0)]
+TicketId = EntityId
 
 
 @router.post(
@@ -42,6 +44,7 @@ async def create_ticket(
         creator_id=user.id,
         actor=user,
         priority=payload.priority,
+        category=payload.category,
     )
     return ApiResponse(data=TicketRead.model_validate(ticket))
 
@@ -53,24 +56,30 @@ async def create_ticket(
 async def list_tickets(
     service: TicketServiceDependency,
     user: CurrentUser,
-    page: Annotated[int, Query(ge=1)] = 1,
-    page_size: Annotated[int, Query(ge=1, le=100)] = 10,
+    page: PageNumber = 1,
+    page_size: PageSize = 10,
     ticket_status: Annotated[
         TicketStatus | None,
         Query(alias="status"),
     ] = None,
     priority: Annotated[TicketPriority | None, Query()] = None,
+    category: Annotated[TicketCategory | None, Query()] = None,
     keyword: Annotated[str | None, Query(max_length=200)] = None,
     sort_order: Annotated[Literal["asc", "desc"], Query()] = "desc",
+    scope: Annotated[Literal["mine", "unassigned"] | None, Query()] = None,
+    assignee_id: Annotated[int | None, Query(gt=0, le=9_223_372_036_854_775_807)] = None,
+    unassigned: bool = False,
 ) -> ApiResponse[PageData[TicketRead]]:
     """通过查询参数筛选并分页查询工单集合。"""
 
     tickets, total = await service.list_tickets(
         actor=user,
+        scope=scope, assignee_id=assignee_id, unassigned=unassigned,
         page=page,
         page_size=page_size,
         status=ticket_status,
         priority=priority,
+        category=category,
         keyword=keyword,
         sort_order=sort_order,
     )
@@ -82,6 +91,11 @@ async def list_tickets(
             total=total,
         )
     )
+
+
+@router.get("/summary", response_model=ApiResponse[TicketSummary])
+async def ticket_summary(service: TicketServiceDependency, user: CurrentUser):
+    return ApiResponse(data=TicketSummary.model_validate(await service.summary(actor=user)))
 
 
 @router.get(
@@ -154,8 +168,8 @@ async def assign_ticket(ticket_id: TicketId, payload: TicketAssignRequest,
 
 @router.get("/{ticket_id}/activities", response_model=ApiResponse[list[ActivityResponse]])
 async def list_activities(ticket_id: TicketId, service: TicketServiceDependency,
-                          user: CurrentUser) -> ApiResponse[list[ActivityResponse]]:
-    activities = await service.list_activities(ticket_id, actor=user)
+                          user: CurrentUser, before_id: BeforeId = None, limit: PageSize = 50) -> ApiResponse[list[ActivityResponse]]:
+    activities = await service.list_activities(ticket_id, actor=user, before_id=before_id, limit=limit)
     return ApiResponse(data=[ActivityResponse.model_validate(row) for row in activities])
 
 
@@ -189,10 +203,12 @@ async def list_comments(
     ticket_id: TicketId,
     service: TicketServiceDependency,
     user: CurrentUser,
+    before_id: BeforeId = None,
+    limit: PageSize = 50,
 ) -> ApiResponse[list[CommentResponse]]:
-    """查询工单的全部回复。"""
+    """查询工单最近一页回复，使用 before_id 加载更早记录。"""
 
-    comments = await service.list_comments(ticket_id, actor=user)
+    comments = await service.list_comments(ticket_id, actor=user, before_id=before_id, limit=limit)
     return ApiResponse(
         data=[CommentResponse.model_validate(comment) for comment in comments]
     )

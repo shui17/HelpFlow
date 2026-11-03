@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 
 def create_database(url: str):
-    engine = create_async_engine(url, pool_pre_ping=True, hide_parameters=True)
+    engine = create_async_engine(url, pool_pre_ping=True, hide_parameters=True, isolation_level="REPEATABLE READ")
 
     @event.listens_for(engine.sync_engine, "connect")
     def set_utc(connection, record):
