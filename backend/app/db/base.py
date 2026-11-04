@@ -25,5 +25,14 @@ class Base(DeclarativeBase):
     pass
 
 
+class UTCMicroDateTime(UTCDateTime):
+    """SLA 边界比较保留微秒；不改变历史业务时间列的精度。"""
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        from sqlalchemy.dialects.mysql import DATETIME
+        return dialect.type_descriptor(DATETIME(fsp=6) if dialect.name == "mysql" else DateTime())
+
+
 def utcnow() -> datetime:
     return datetime.now(UTC)

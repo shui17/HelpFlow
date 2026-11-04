@@ -1,0 +1,43 @@
+{
+  "measured_at": "2026-11-03T12:04:05.852306+00:00",
+  "sample": 12,
+  "batch_size": 3,
+  "mode": "database_only",
+  "mysql": "8.0.46",
+  "scenario": "6 overdue by 10 seconds, 6 due in 60 seconds; deliberately synthetic deadlines; Redis initially empty",
+  "first_round_ms": 155.743,
+  "first_round": {
+    "processed": 12,
+    "events": 12,
+    "failed": 0,
+    "compensated": 12,
+    "max_detection_delay_seconds": 840.18099,
+    "max_overdue_delay_seconds": 10.112111,
+    "max_warning_delay_seconds": 840.18099,
+    "pending": 6,
+    "overdue_pending": 0,
+    "oldest_overdue_at": null
+  },
+  "repeated_round": {
+    "processed": 6,
+    "events": 0,
+    "failed": 0,
+    "compensated": 6,
+    "max_detection_delay_seconds": 0,
+    "pending": 6,
+    "overdue_pending": 0,
+    "oldest_overdue_at": null
+  },
+  "sample_overdue_events": 6,
+  "sample_warning_events": 6,
+  "sample_notifications": 12,
+  "overdue_detection_delay_seconds": [
+    10.050171,
+    10.065771,
+    10.077228,
+    10.090174,
+    10.099624,
+    10.112111
+  ],
+  "limitations": "Single local scanner, synthetic deadlines, no external network or throughput claim"
+}

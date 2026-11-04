@@ -1,4 +1,6 @@
 import { test, expect } from '@playwright/test'
+import { execFileSync } from 'node:child_process'
+import { resolve } from 'node:path'
 const password = process.env.E2E_PASSWORD || 'BrowserTest123'
 async function login(page, email) {
   await page.goto('/login')
@@ -10,6 +12,72 @@ async function login(page, email) {
 async function confirm(page) {
   await page.locator('.el-message-box').getByRole('button', { name: '确认', exact: true }).click()
 }
+
+test('阶段13 SLA 筛选、升级记录及晚响应展示', async ({ page, browser, request }) => {
+  const api = 'http://127.0.0.1:8011/api/v1'
+  const email = `sla-${Date.now()}@example.com`
+  expect((await request.post(`${api}/auth/register`, { data: {
+    username: '时限测试用户', email, password, confirm_password: password,
+  } })).status()).toBe(201)
+  const session = (await (await request.post(`${api}/auth/login`, { data: { email, password } })).json()).data
+  const headers = { Authorization: `Bearer ${session.access_token}` }
+  const created = await request.post(`${api}/tickets`, { headers, data: { title: '阶段13时限演示', description: '首次响应超时后仍保留逾期事实' } })
+  expect(created.status()).toBe(201)
+  const ticket = (await created.json()).data
+  expect(ticket.sla.state).toBe('waiting')
+  // 只调整 Playwright 已校验的独立测试库，走真实扫描器与事务通知。
+  const python = resolve('../backend/.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
+  execFileSync(python, ['-c', `
+import asyncio, os, sys
+from sqlalchemy.engine import make_url
+from datetime import timedelta
+from app.config import Settings
+from app.db.base import utcnow
+from app.db.session import create_database
+from app.models import TicketSLA
+from app.sla_scheduler import SLAIndex
+from scripts.scan_sla import Scanner
+async def run():
+    url = os.environ['HELPFLOW_TEST_DATABASE_URL']
+    assert (make_url(url).database or '').startswith('helpflow_stage5_test')
+    engine, factory = create_database(url)
+    index = SLAIndex(Settings(_env_file=None, redis_url=None))
+    try:
+        async with factory() as session, session.begin():
+            row = await session.get(TicketSLA, int(sys.argv[1]))
+            row.due_at = utcnow() - timedelta(seconds=10)
+        stats = dict(processed=0, events=0, failed=0, max_detection_delay_seconds=0)
+        await Scanner(factory, index).process(int(sys.argv[1]), 1, stats)
+        assert stats['events'] == 1 and stats['failed'] == 0
+    finally:
+        await index.close()
+        await engine.dispose()
+asyncio.run(run())
+`, String(ticket.id)], { cwd: resolve('../backend'), env: process.env, timeout: 20000 })
+  await login(page, email)
+  await page.getByRole('link', { name: '查看已超时 →', exact: true }).click()
+  await expect(page).toHaveURL(/user\/tickets\?sla=overdue$/)
+  await page.getByRole('link', { name: '阶段13时限演示', exact: true }).click()
+  const panel = page.locator('section.panel').filter({ has: page.getByRole('heading', { name: '首次响应时限', exact: true }) })
+  await expect(panel.getByText('已超时', { exact: true })).toBeVisible()
+  await expect(panel.getByText(/超时升级 ·/)).toBeVisible()
+  await expect(panel.getByText('尚未响应', { exact: true })).toBeVisible()
+  const context = await browser.newContext()
+  try {
+    const agent = await context.newPage()
+    await login(agent, 'browser-agent@example.com')
+    await agent.goto(`/agent/tickets/${ticket.id}`)
+    await agent.getByRole('button', { name: '领取工单', exact: true }).click(); await confirm(agent)
+    await agent.getByLabel('添加回复', { exact: true }).fill('首次响应虽晚，升级记录仍保留')
+    await agent.getByRole('button', { name: '发送回复', exact: true }).click()
+    await expect(agent.getByText('首次响应虽晚，升级记录仍保留', { exact: true })).toBeVisible()
+    await page.reload()
+    await expect(panel.getByText('尚未响应', { exact: true })).toHaveCount(0)
+    await expect(panel.getByText('已超时', { exact: true })).toBeVisible()
+    await expect(panel.getByText(/超时升级 ·/)).toHaveCount(1)
+    await page.screenshot({ path: resolve('../.local/stage13-sla-detail.png'), fullPage: true })
+  } finally { await context.close() }
+})
 test('三角色工单闭环和临时故障会话恢复', async ({ page, browser }) => {
   const errors = []
   page.on('pageerror', error => errors.push(error.message))

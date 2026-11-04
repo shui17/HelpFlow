@@ -16,7 +16,7 @@ class AsyncMemoryService:
             # 早期内存练习没有分类；分类契约在真实 MySQL 测试中验证。
             kwargs.pop("category", None)
             if name == "list_tickets":
-                for field in ("scope", "assignee_id", "unassigned"):
+                for field in ("scope", "assignee_id", "unassigned", "sla_filter"):
                     kwargs.pop(field, None)
             before_id = kwargs.pop("before_id", None)
             limit = kwargs.pop("limit", 50)

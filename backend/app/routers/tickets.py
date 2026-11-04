@@ -18,6 +18,7 @@ from app.schemas import (
     TicketRead,
     TicketStatusUpdateRequest,
     TicketUpdate,
+    SLAEventResponse,
 )
 from app.domain.enums import TicketPriority, TicketStatus, TicketCategory
 from app.services.tickets import TicketService
@@ -71,12 +72,14 @@ async def list_tickets(
     scope: Annotated[Literal["mine", "unassigned"] | None, Query()] = None,
     assignee_id: Annotated[int | None, Query(gt=0, le=9_223_372_036_854_775_807)] = None,
     unassigned: bool = False,
+    sla: Annotated[Literal["due_soon", "overdue"] | None, Query()] = None,
 ) -> ApiResponse[PageData[TicketRead]]:
     """通过查询参数筛选并分页查询工单集合。"""
 
     tickets, total = await service.list_tickets(
         actor=user,
         scope=scope, assignee_id=assignee_id, unassigned=unassigned,
+        sla_filter=sla,
         page=page,
         page_size=page_size,
         status=ticket_status,
@@ -181,6 +184,12 @@ async def list_activities(ticket_id: TicketId, service: TicketServiceDependency,
                           user: CurrentUser, before_id: BeforeId = None, limit: PageSize = 50) -> ApiResponse[list[ActivityResponse]]:
     activities = await service.list_activities(ticket_id, actor=user, before_id=before_id, limit=limit)
     return ApiResponse(data=[ActivityResponse.model_validate(row) for row in activities])
+
+
+@router.get("/{ticket_id}/sla-events", response_model=ApiResponse[list[SLAEventResponse]])
+async def sla_events(ticket_id: TicketId, service: TicketServiceDependency, user: CurrentUser):
+    rows = await service.sla_events(ticket_id, actor=user)
+    return ApiResponse(data=[SLAEventResponse.model_validate(row) for row in rows])
 
 
 @router.post("/{ticket_id}/transfer", response_model=ApiResponse[TicketRead])

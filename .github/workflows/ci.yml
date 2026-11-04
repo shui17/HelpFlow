@@ -6,6 +6,13 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     services:
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s --health-timeout=3s --health-retries=10
       mysql:
         image: mysql:8.0
         env:
@@ -23,6 +30,7 @@ jobs:
       HELPFLOW_DATABASE_URL: mysql+asyncmy://root:ci-root-password@127.0.0.1:3306/helpflow_stage5_test_ci?charset=utf8mb4
       HELPFLOW_JWT_SECRET_KEY: ci-only-browser-signing-key-0123456789abcdef
       HELPFLOW_TEST_DATABASE_URL: mysql+asyncmy://root:ci-root-password@127.0.0.1:3306/helpflow_stage5_test_ci?charset=utf8mb4
+      HELPFLOW_TEST_REDIS_URL: redis://127.0.0.1:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6

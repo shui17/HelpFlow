@@ -648,6 +648,26 @@
               "default": false,
               "title": "Unassigned"
             }
+          },
+          {
+            "name": "sla",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "due_soon",
+                    "overdue"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sla"
+            }
           }
         ],
         "responses": {
@@ -1212,6 +1232,55 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ApiResponse_list_ActivityResponse__"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/sla-events": {
+      "get": {
+        "tags": [
+          "tickets"
+        ],
+        "summary": "Sla Events",
+        "operationId": "sla_events_api_v1_tickets__ticket_id__sla_events_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_list_SLAEventResponse__"
                 }
               }
             }
@@ -2244,6 +2313,32 @@
         ],
         "title": "ApiResponse[list[NotificationResponse]]"
       },
+      "ApiResponse_list_SLAEventResponse__": {
+        "properties": {
+          "code": {
+            "type": "integer",
+            "title": "Code",
+            "default": 0
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "success"
+          },
+          "data": {
+            "items": {
+              "$ref": "#/components/schemas/SLAEventResponse"
+            },
+            "type": "array",
+            "title": "Data"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[list[SLAEventResponse]]"
+      },
       "CommentCreateRequest": {
         "properties": {
           "content": {
@@ -2477,6 +2572,116 @@
         ],
         "title": "PasswordChangeRequest"
       },
+      "SLAEventResponse": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "due_soon",
+              "overdue"
+            ],
+            "title": "Kind"
+          },
+          "occurred_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Occurred At"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "version",
+          "kind",
+          "occurred_at",
+          "due_at"
+        ],
+        "title": "SLAEventResponse"
+      },
+      "SLASummary": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TicketPriority"
+          },
+          "response_seconds": {
+            "type": "integer",
+            "title": "Response Seconds"
+          },
+          "warning_seconds": {
+            "type": "integer",
+            "title": "Warning Seconds"
+          },
+          "due_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Due At"
+          },
+          "first_response_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Response At"
+          },
+          "escalated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Escalated At"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "waiting",
+              "due_soon",
+              "overdue",
+              "on_time",
+              "terminated"
+            ],
+            "title": "State"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "priority",
+          "response_seconds",
+          "warning_seconds",
+          "due_at",
+          "first_response_at",
+          "escalated_at",
+          "state"
+        ],
+        "title": "SLASummary"
+      },
       "TicketAssignRequest": {
         "properties": {
           "assignee_id": {
@@ -2506,6 +2711,16 @@
       },
       "TicketCounts": {
         "properties": {
+          "due_soon": {
+            "type": "integer",
+            "title": "Due Soon",
+            "default": 0
+          },
+          "overdue": {
+            "type": "integer",
+            "title": "Overdue",
+            "default": 0
+          },
           "open": {
             "type": "integer",
             "title": "Open",
@@ -2667,6 +2882,16 @@
               }
             ],
             "title": "Closed At"
+          },
+          "sla": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SLASummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",

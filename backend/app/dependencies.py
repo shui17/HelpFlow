@@ -55,7 +55,7 @@ def get_user_service(session: SessionDependency) -> UserService:
     return UserService(session)
 
 
-def get_ticket_service(session: SessionDependency) -> TicketService:
+def get_ticket_service(session: SessionDependency, request: Request) -> TicketService:
     """供 FastAPI Depends 注入工单服务。"""
 
-    return TicketService(session)
+    return TicketService(session, request.app.state.settings)

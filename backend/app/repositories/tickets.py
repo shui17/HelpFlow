@@ -2,7 +2,8 @@ from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.models import Activity, Comment, Ticket, User
+from app.models import Activity, Comment, Ticket, TicketSLA, User
+from app.services.sla import filter_condition
 from app.db.base import utcnow
 
 
@@ -48,8 +49,10 @@ class TicketRepository:
         return conditions
 
     async def list(self, *, page, page_size, status, priority, keyword, sort_order, actor,
-                   category=None, scope=None, assignee_id=None, unassigned=False):
+                   category=None, scope=None, assignee_id=None, unassigned=False, sla_filter=None):
         conditions = self.visible_conditions(actor)
+        if sla_filter:
+            conditions.append(Ticket.id.in_(select(TicketSLA.ticket_id).where(filter_condition(sla_filter))))
         if scope == "mine":
             conditions.append(Ticket.assignee_id == actor.id)
         if scope == "unassigned":
@@ -96,6 +99,10 @@ class TicketRepository:
         grouped = await self.session.execute(select(Ticket.status, func.count())
             .where(*owned).group_by(Ticket.status))
         counts = dict(grouped.all())
+        now = utcnow()
+        for kind in ("due_soon", "overdue"):
+            counts[kind] = await self.session.scalar(select(func.count()).select_from(Ticket)
+                .where(*owned, Ticket.id.in_(select(TicketSLA.ticket_id).where(filter_condition(kind, now)))))
         counts["unassigned"] = await self.session.scalar(select(func.count()).select_from(Ticket)
             .where(*conditions, Ticket.status == "open", Ticket.assignee_id.is_(None)))
         if actor.role == "admin":

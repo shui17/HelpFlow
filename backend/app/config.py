@@ -25,6 +25,11 @@ class Settings(BaseSettings):
     auth_login_ip_limit: int = Field(default=60, ge=1, le=10000)
     auth_login_account_limit: int = Field(default=10, ge=1, le=1000)
     auth_register_ip_limit: int = Field(default=10, ge=1, le=1000)
+    redis_url: SecretStr | None = None
+    sla_redis_key: str = Field(default="helpflow:sla:pending", min_length=1)
+    sla_scan_seconds: float = Field(default=5, ge=0.1, le=3600)
+    sla_compensate_seconds: float = Field(default=60, ge=1, le=86400)
+    sla_batch_size: int = Field(default=100, ge=1, le=1000)
 
     def signing_key(self) -> str:
         value = self.jwt_secret_key.get_secret_value() if self.jwt_secret_key else ""

@@ -102,3 +102,14 @@ flowchart TD
 - `backend/tests/test_stage12.py`：内部信息隔离、转交竞争、异常回滚、通知幂等；浏览器回归增加两名客服的转交闭环。
 - `backend/scripts/benchmark_summary.py`：隔离测试库中的分页与聚合实测及 EXPLAIN 导出。
 - [阶段12运行与验证](../guides/stage12-collaboration.md)、[升级需求](../upgrades/v1.1-collaboration-requirements.md)。
+
+## 阶段13 SLA 与调度
+
+- `backend/alembic/versions/004_sla.py`：规则、工单快照、幂等事件及微秒时间迁移。
+- `backend/app/services/sla.py`：规则快照、首次响应、终止等待、提醒和超时事务通知。
+- `backend/app/sla_scheduler.py`：有超时限制的 Redis 索引操作和提交后的更新。
+- `backend/scripts/scan_sla.py`：独立扫描进程、批量到期查询、数据库补偿和运行指标。
+- `backend/scripts/configure_sla.py`、`measure_sla.py`：发布新版本规则、隔离测试库实测与清理。
+- `frontend/src/components/TicketSLA.vue`：详情 SLA 与升级记录；首页和列表增加授权范围内的筛选。
+- `backend/tests/test_stage13.py`：临界时间、幂等竞争、回滚、Redis 故障和补偿恢复；CI 另启真实 Redis 服务。
+- [阶段13运行与验证](../guides/stage13-sla.md)、[设计](decisions/2026-11-03-stage13-sla-design.md)。

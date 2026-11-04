@@ -1,11 +1,11 @@
-"""业务表与通知映射；关系禁止隐式 IO，查询时显式预加载。"""
+"""业务、通知与 SLA 映射；SLA 摘要按批预加载，其余关系禁止隐式 IO。"""
 
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, String, Text, UniqueConstraint, text
+from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db.base import Base, UTCDateTime, utcnow
+from app.db.base import Base, UTCDateTime, UTCMicroDateTime, utcnow
 
 TABLE_OPTIONS = {"mysql_engine": "InnoDB", "mysql_charset": "utf8mb4", "mysql_collate": "utf8mb4_0900_ai_ci"}
 
@@ -54,6 +54,13 @@ class Ticket(CreatedMixin, UpdatedMixin, Base):
     assignee: Mapped[User | None] = relationship(back_populates="assigned_tickets", foreign_keys=[assignee_id], lazy="raise")
     comments: Mapped[list["Comment"]] = relationship(back_populates="ticket", lazy="raise")
     activities: Mapped[list["Activity"]] = relationship(back_populates="ticket", lazy="raise")
+    sla_snapshot: Mapped["TicketSLA | None"] = relationship(lazy="selectin", uselist=False)
+
+    @property
+    def sla(self):
+        from app.services.sla import describe
+        return describe(self.sla_snapshot)
+
     __table_args__ = (
         UniqueConstraint("ticket_no", name="uq_tickets_no"),
         CheckConstraint("category IN ('account', 'product', 'payment', 'technical', 'other')", name="ck_tickets_category"),
@@ -68,6 +75,8 @@ class Ticket(CreatedMixin, UpdatedMixin, Base):
 
 class Comment(CreatedMixin, Base):
     __tablename__ = "ticket_comments"
+    created_at: Mapped[datetime] = mapped_column(UTCMicroDateTime(), default=utcnow,
+                                                server_default=text("CURRENT_TIMESTAMP(6)"))
     id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
     ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
     author_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
@@ -145,4 +154,48 @@ class Notification(CreatedMixin, Base):
         Index("ix_notifications_recipient_id", "recipient_id", "id"),
         Index("ix_notifications_recipient_read", "recipient_id", "read_at", "id"),
         Index("ix_notifications_ticket", "ticket_id"), TABLE_OPTIONS,
+    )
+
+
+class SLARule(Base):
+    __tablename__ = "sla_rules"
+    priority: Mapped[str] = mapped_column(String(20), primary_key=True)
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    response_seconds: Mapped[int] = mapped_column(Integer)
+    warning_seconds: Mapped[int] = mapped_column(Integer)
+    __table_args__ = (
+        CheckConstraint("response_seconds > 0 AND warning_seconds >= 0 AND warning_seconds < response_seconds", name="ck_sla_rule_duration"),
+        CheckConstraint("version > 0", name="ck_sla_rule_version"),
+        CheckConstraint("priority IN ('low', 'normal', 'high', 'urgent')", name="ck_sla_rule_priority"), TABLE_OPTIONS,
+    )
+
+
+class TicketSLA(Base):
+    __tablename__ = "ticket_sla"
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"), primary_key=True)
+    version: Mapped[int] = mapped_column(Integer)
+    priority: Mapped[str] = mapped_column(String(20))
+    response_seconds: Mapped[int] = mapped_column(Integer)
+    warning_seconds: Mapped[int] = mapped_column(Integer)
+    started_at: Mapped[datetime] = mapped_column(UTCMicroDateTime())
+    due_at: Mapped[datetime] = mapped_column(UTCMicroDateTime())
+    first_response_at: Mapped[datetime | None] = mapped_column(UTCMicroDateTime())
+    terminated_at: Mapped[datetime | None] = mapped_column(UTCMicroDateTime())
+    escalated_at: Mapped[datetime | None] = mapped_column(UTCMicroDateTime())
+    __table_args__ = (
+        Index("ix_sla_pending_due", "first_response_at", "terminated_at", "escalated_at", "due_at", "ticket_id"), TABLE_OPTIONS,
+    )
+
+
+class SLAEvent(Base):
+    __tablename__ = "sla_events"
+    id: Mapped[int] = mapped_column(BigInteger, primary_key=True, autoincrement=True)
+    ticket_id: Mapped[int] = mapped_column(ForeignKey("tickets.id"))
+    version: Mapped[int] = mapped_column(Integer)
+    kind: Mapped[str] = mapped_column(String(20))
+    occurred_at: Mapped[datetime] = mapped_column(UTCMicroDateTime())
+    due_at: Mapped[datetime] = mapped_column(UTCMicroDateTime())
+    __table_args__ = (
+        UniqueConstraint("ticket_id", "version", "kind", name="uq_sla_event"),
+        CheckConstraint("kind IN ('due_soon', 'overdue')", name="ck_sla_event_kind"), TABLE_OPTIONS,
     )

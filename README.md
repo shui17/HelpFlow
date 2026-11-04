@@ -1,5 +1,9 @@
 # HelpFlow
 
+阶段13新增首次响应 SLA、超时升级通知、Redis ZSET 调度与数据库补偿，以及首页筛选和详情记录。升级需运行 `uv sync --locked`、`uv run alembic upgrade head`，并独立启动 `uv run python -m scripts.scan_sla`。配置和验证范围见 [阶段13运行与验证](docs/guides/stage13-sla.md)。
+
+阶段13本地验证：100项后端测试通过，1项真实 Redis 测试因本机无服务跳过；24项前端测试、3项浏览器流程及生产构建通过。Redis 服务验证已接入 CI，远端结果待实际运行。
+
 阶段12新增客服转交、内部备注和持久化站内通知。升级现有库需先运行 `uv run alembic upgrade head`，详情及验证状态见 [阶段12运行与验证](docs/guides/stage12-collaboration.md)。
 
 阶段12本地验证：86项后端测试、21项前端测试、2项浏览器流程通过，生产构建成功；250张工单的聚合测量与 EXPLAIN 已留存。

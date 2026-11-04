@@ -15,11 +15,14 @@ from app.domain.exceptions import (
 )
 from app.domain.workflow import ALLOWED_STATUS_TRANSITIONS
 from app.services.notifications import enqueue
+from app.services import sla
+from app.sla_scheduler import after_commit
 
 
 class TicketService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, settings=None):
         self.session = session
+        self.settings = settings
         self.tickets = TicketRepository(session)
         self.users = UserRepository(session)
 
@@ -80,14 +83,16 @@ class TicketService:
                 creator_id=creator_id, priority=priority.value, category=category.value, status="open",
             ))
             self._activity(ticket, actor, "created", new_status="open")
+            row = await sla.snapshot(self.session, ticket)
+        await after_commit(ticket.id, row.version, row.due_at, settings=self.settings)
         return ticket
 
     async def list_tickets(self, *, actor, page=1, page_size=10, status=None, priority=None,
-                           keyword=None, sort_order="desc", category=None, scope=None, assignee_id=None, unassigned=False):
+                           keyword=None, sort_order="desc", category=None, scope=None, assignee_id=None, unassigned=False, sla_filter=None):
         if not 1 <= page <= 1_000_000 or not 1 <= page_size <= 100 or sort_order not in ("asc", "desc"):
             raise InvalidTicketDataError("分页或排序参数无效")
         return await self.tickets.list(page=page, page_size=page_size, status=status,
-            priority=priority, keyword=keyword, sort_order=sort_order, actor=actor, category=category, scope=scope, assignee_id=assignee_id, unassigned=unassigned)
+            priority=priority, keyword=keyword, sort_order=sort_order, actor=actor, category=category, scope=scope, assignee_id=assignee_id, unassigned=unassigned, sla_filter=sla_filter)
 
     async def update_ticket(self, ticket_id, *, actor, title=None, description=None, priority=None, category=None):
         async with self.session.begin():
@@ -116,7 +121,10 @@ class TicketService:
             if ticket.status != "open" or ticket.assignee_id is not None:
                 raise AppError(409, 40005, "只有待处理且未分配的工单可以撤销")
             ticket.status, ticket.closed_at = "closed", utcnow()
+            await sla.terminate(self.session, ticket)
             self._activity(ticket, actor, "cancelled", old_status="open", new_status="closed")
+        if ticket.sla_snapshot:
+            await after_commit(ticket.id, ticket.sla_snapshot.version, settings=self.settings)
         return ticket
 
     async def claim_ticket(self, ticket_id, *, actor):
@@ -215,6 +223,10 @@ class TicketService:
             action = ("closed" if new_status == TicketStatus.CLOSED else
                       "reopened" if previous == "resolved" else "status_changed")
             self._activity(ticket, actor, action, old_status=previous, new_status=new_status.value)
+            if new_status == TicketStatus.CLOSED:
+                await sla.terminate(self.session, ticket)
+        if new_status == TicketStatus.CLOSED and ticket.sla_snapshot:
+            await after_commit(ticket.id, ticket.sla_snapshot.version, settings=self.settings)
         return ticket
 
     async def add_comment(self, ticket_id, author_id, content, *, actor):
@@ -228,15 +240,26 @@ class TicketService:
                 raise InvalidTicketDataError("已关闭工单不能新增回复")
             if not content.strip():
                 raise InvalidTicketDataError("回复内容不能为空")
+            response_time = utcnow()
             comment = await self.tickets.add_comment(Comment(
-                ticket_id=ticket_id, author_id=author_id, content=content.strip()
+                ticket_id=ticket_id, author_id=author_id, content=content.strip(), created_at=response_time
             ))
+            if actor.role == "agent":
+                await sla.respond(self.session, ticket, response_time)
             ticket.updated_at = utcnow()
             recipient = ticket.assignee_id if actor.role == "user" else ticket.creator_id
             if recipient is not None and recipient != actor.id:
                 await enqueue(self.session, event_key=f"comment:{comment.id}", recipient_id=recipient,
                               ticket_id=ticket.id, message="您的工单有一条新的公开回复")
+        if actor.role == "agent" and ticket.sla_snapshot:
+            await after_commit(ticket.id, ticket.sla_snapshot.version, settings=self.settings)
         return comment
+
+    async def sla_events(self, ticket_id, *, actor):
+        from app.models import SLAEvent
+        await self.get_visible_ticket(ticket_id, actor)
+        return list(await self.session.scalars(select(SLAEvent).where(SLAEvent.ticket_id == ticket_id)
+                                               .order_by(SLAEvent.id)))
 
     async def summary(self, *, actor):
         return await self.tickets.summary(actor)

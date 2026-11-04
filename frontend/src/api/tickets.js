@@ -14,3 +14,4 @@ export const transferTicket = (id, assignee_id, reason) => request.post(`/ticket
 export const getAgents = (keyword) => request.get('/tickets/agents', { params: { keyword } })
 export const getTicketNotes = (id, params) => request.get(`/tickets/${id}/notes`, { params })
 export const createTicketNote = (id, content) => request.post(`/tickets/${id}/notes`, { content })
+export const getTicketSLAEvents = (id) => request.get(`/tickets/${id}/sla-events`)

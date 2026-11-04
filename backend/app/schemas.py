@@ -179,6 +179,26 @@ class ActivityResponse(BaseModel):
     created_at: datetime
 
 
+class SLASummary(BaseModel):
+    version: int
+    priority: TicketPriority
+    response_seconds: int
+    warning_seconds: int
+    due_at: datetime
+    first_response_at: datetime | None
+    escalated_at: datetime | None
+    state: Literal["waiting", "due_soon", "overdue", "on_time", "terminated"]
+
+
+class SLAEventResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    version: int
+    kind: Literal["due_soon", "overdue"]
+    occurred_at: datetime
+    due_at: datetime
+
+
 class TicketRead(BaseModel):
     """工单的 HTTP 响应字段。"""
 
@@ -196,6 +216,7 @@ class TicketRead(BaseModel):
     updated_at: datetime | None = None
     assigned_at: datetime | None = None
     closed_at: datetime | None = None
+    sla: SLASummary | None = None
 
 
 # 保留接口模型的兼容别名，两个名称指向同一个模型。
@@ -226,6 +247,8 @@ class CommentResponse(BaseModel):
 
 
 class TicketCounts(BaseModel):
+    due_soon: int = 0
+    overdue: int = 0
     open: int = 0
     in_progress: int = 0
     resolved: int = 0
