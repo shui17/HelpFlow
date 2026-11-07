@@ -65,7 +65,8 @@ async def main(args):
 if __name__ == '__main__':
     root = Path(__file__).parents[2] / 'knowledge'
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--cases', nargs='+', default=[str(root/'evaluation.json'), str(root/'evaluation-extra.json')])
+    parser.add_argument('--cases', nargs='+', default=[str(root/name) for name in
+        ('evaluation.json', 'evaluation-extra.json', 'evaluation-scenarios.json')])
     parser.add_argument('--threshold', type=float, help='仅本次评测使用，不修改应用配置')
     parser.add_argument('--output', help='保存含分数的 JSON 报告')
     asyncio.run(main(parser.parse_args()))
