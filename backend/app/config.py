@@ -24,6 +24,9 @@ class Settings(BaseSettings):
     rag_timeout: float = Field(default=45, ge=1, le=120)
     rag_top_k: int = Field(default=4, ge=1, le=8)
     rag_min_score: float = Field(default=0.5, ge=-1, le=1)
+    agent_checkpoint_path: str = str(Path(__file__).resolve().parents[1] / '.local/agent-checkpoints.sqlite')
+    agent_timeout: float = Field(default=180, ge=10, le=300)
+    agent_confirmation_seconds: int = Field(default=900, ge=30, le=3600)
     cors_origins: list[str] = ["http://localhost:5173"]
     database_url: SecretStr = SecretStr("mysql+asyncmy://helpflow@127.0.0.1:3306/helpflow?charset=utf8mb4")
     jwt_secret_key: SecretStr | None = None

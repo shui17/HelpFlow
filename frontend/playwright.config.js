@@ -10,7 +10,7 @@ export default defineConfig({
   use: { baseURL: 'http://127.0.0.1:5175', trace: 'retain-on-failure',
     launchOptions: process.env.E2E_BROWSER_PATH ? { executablePath: process.env.E2E_BROWSER_PATH } : {} },
   webServer: [
-    { command: `"${python}" -m uvicorn app.main:app --host 127.0.0.1 --port 8011`, cwd: '../backend', env: {
+    { command: `"${python}" -m uvicorn ${process.env.E2E_AGENT === '1' ? 'tests.agent_browser_app:app' : 'app.main:app'} --host 127.0.0.1 --port 8011`, cwd: '../backend', env: {
       HELPFLOW_DATABASE_URL: testDatabase,
       HELPFLOW_JWT_SECRET_KEY: process.env.HELPFLOW_JWT_SECRET_KEY || 'local-browser-tests-only-signing-key-0123456789',
       HELPFLOW_CORS_ORIGINS: '["http://127.0.0.1:5175"]',

@@ -189,14 +189,19 @@ class TicketService:
     async def add_note(self, ticket_id, content, *, actor):
         async with self.session.begin():
             ticket = await self.get_ticket(ticket_id, lock=True)
-            self.check_internal(ticket, actor)
-            if ticket.status == "closed":
-                raise AppError(409, 40005, "已关闭工单不能新增内部备注")
-            if not 1 <= len(content.strip()) <= 2000:
-                raise InvalidTicketDataError("内部备注需要 1 至 2000 字")
-            note = await self.tickets.add_comment(Comment(ticket_id=ticket_id, author_id=actor.id,
-                                                        content=content.strip(), visibility="internal"))
-            ticket.updated_at = utcnow()
+            note = await self.add_note_in_transaction(ticket, content, actor=actor)
+        return note
+
+    async def add_note_in_transaction(self, ticket, content, *, actor):
+        """调用者持有工单行锁与事务，允许与 Agent 去重记录原子提交。"""
+        self.check_internal(ticket, actor)
+        if ticket.status == "closed":
+            raise AppError(409, 40005, "已关闭工单不能新增内部备注")
+        if not 1 <= len(content.strip()) <= 2000:
+            raise InvalidTicketDataError("内部备注需要 1 至 2000 字")
+        note = await self.tickets.add_comment(Comment(ticket_id=ticket.id, author_id=actor.id,
+                                                    content=content.strip(), visibility="internal"))
+        ticket.updated_at = utcnow()
         return note
 
     async def list_notes(self, ticket_id, *, actor, before_id=None, limit=50):
@@ -232,27 +237,31 @@ class TicketService:
     async def add_comment(self, ticket_id, author_id, content, *, actor):
         async with self.session.begin():
             ticket = await self.get_ticket(ticket_id, lock=True)
-            if author_id != actor.id or not ((actor.role == "user" and ticket.creator_id == actor.id) or
-                                            (actor.role == "agent" and ticket.assignee_id == actor.id)):
-                raise AppError(403, 40002, "无权查看或操作该工单")
-            await self._user(author_id)
-            if ticket.status == "closed":
-                raise InvalidTicketDataError("已关闭工单不能新增回复")
-            if not content.strip():
-                raise InvalidTicketDataError("回复内容不能为空")
-            response_time = utcnow()
-            comment = await self.tickets.add_comment(Comment(
-                ticket_id=ticket_id, author_id=author_id, content=content.strip(), created_at=response_time
-            ))
-            if actor.role == "agent":
-                await sla.respond(self.session, ticket, response_time)
-            ticket.updated_at = utcnow()
-            recipient = ticket.assignee_id if actor.role == "user" else ticket.creator_id
-            if recipient is not None and recipient != actor.id:
-                await enqueue(self.session, event_key=f"comment:{comment.id}", recipient_id=recipient,
-                              ticket_id=ticket.id, message="您的工单有一条新的公开回复")
+            comment = await self.add_comment_in_transaction(ticket, author_id, content, actor=actor)
         if actor.role == "agent" and ticket.sla_snapshot:
             await after_commit(ticket.id, ticket.sla_snapshot.version, settings=self.settings)
+        return comment
+
+    async def add_comment_in_transaction(self, ticket, author_id, content, *, actor):
+        """与公开回复接口共用规则；提交后调度由事务拥有者执行。"""
+        if author_id != actor.id or not ((actor.role == "user" and ticket.creator_id == actor.id) or
+                                        (actor.role == "agent" and ticket.assignee_id == actor.id)):
+            raise AppError(403, 40002, "无权查看或操作该工单")
+        await self._user(author_id)
+        if ticket.status == "closed":
+            raise InvalidTicketDataError("已关闭工单不能新增回复")
+        if not 1 <= len(content.strip()) <= 2000:
+            raise InvalidTicketDataError("回复需要 1 至 2000 字")
+        response_time = utcnow()
+        comment = await self.tickets.add_comment(Comment(
+            ticket_id=ticket.id, author_id=author_id, content=content.strip(), created_at=response_time))
+        if actor.role == "agent":
+            await sla.respond(self.session, ticket, response_time)
+        ticket.updated_at = utcnow()
+        recipient = ticket.assignee_id if actor.role == "user" else ticket.creator_id
+        if recipient is not None and recipient != actor.id:
+            await enqueue(self.session, event_key=f"comment:{comment.id}", recipient_id=recipient,
+                          ticket_id=ticket.id, message="您的工单有一条新的公开回复")
         return comment
 
     async def sla_events(self, ticket_id, *, actor):

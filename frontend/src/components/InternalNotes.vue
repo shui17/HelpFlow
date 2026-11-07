@@ -23,7 +23,7 @@ async function send() {
 }
 onMounted(load)
 </script>
-<template><section class="panel"><h2>内部备注</h2><p class="muted">仅当前负责客服和管理员可见。</p>
+<template><section class="panel" aria-label="内部备注"><h2>内部备注</h2><p class="muted">仅当前负责客服和管理员可见。</p>
   <PageState :loading="loading" :error="error" @retry="load()">
     <el-button v-if="more" :disabled="busy" @click="load(true)">加载更早备注</el-button>
     <div v-for="row in rows" :key="row.id" class="comment"><div class="comment-meta"><strong>成员 #{{ row.author_id }}</strong><time>{{ formatDate(row.created_at) }}</time></div><p class="plain-text">{{ row.content }}</p></div>

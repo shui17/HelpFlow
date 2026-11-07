@@ -10,9 +10,9 @@ export function errorMessage(error) {
   return error.response?.data?.message || (error.response ? '系统暂时不可用' : '无法连接服务器，请检查后端是否启动')
 }
 export const notifyError = (error) => ElMessage.error(errorMessage(error))
-export async function confirmAction(message) {
+export async function confirmAction(message, options = {}) {
   try {
-    await ElMessageBox.confirm(message, '确认操作', { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning' })
+    await ElMessageBox.confirm(message, '确认操作', { confirmButtonText: '确认', cancelButtonText: '取消', type: 'warning', ...options })
     return true
   } catch { return false }
 }
