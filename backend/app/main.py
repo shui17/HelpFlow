@@ -9,7 +9,7 @@ from app.rate_limit import AuthRateLimiter
 from app.db.session import create_database
 from app.exception_handlers import register_exception_handlers
 from app.middleware import register_request_logging
-from app.routers import auth, health, tickets, users, notifications
+from app.routers import auth, health, tickets, users, notifications, rag
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -35,6 +35,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=lifespan,
     )
     application.state.settings = settings
+    application.state.rag_active = set()
     application.state.auth_rate_limiter = AuthRateLimiter()
     application.state.engine, application.state.session_factory = create_database(
         settings.database_url.get_secret_value()
@@ -54,6 +55,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(auth.router, prefix="/api/v1")
     application.include_router(users.router, prefix="/api/v1")
     application.include_router(tickets.router, prefix="/api/v1")
+    application.include_router(rag.router, prefix="/api/v1")
     application.include_router(notifications.router, prefix="/api/v1")
     application.include_router(health.router, prefix="/api/v1")
     application.include_router(health.legacy_router)

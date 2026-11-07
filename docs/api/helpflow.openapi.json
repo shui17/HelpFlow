@@ -1631,6 +1631,55 @@
         }
       }
     },
+    "/api/v1/tickets/{ticket_id}/reply-suggestion": {
+      "post": {
+        "tags": [
+          "reply-assistant"
+        ],
+        "summary": "Suggest",
+        "operationId": "suggest_api_v1_tickets__ticket_id__reply_suggestion_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "maximum": 9223372036854775807,
+              "exclusiveMinimum": 0,
+              "title": "Ticket Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiResponse_Suggestion_"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/notifications": {
       "get": {
         "tags": [
@@ -2097,6 +2146,28 @@
           "data"
         ],
         "title": "ApiResponse[PageData[UserResponse]]"
+      },
+      "ApiResponse_Suggestion_": {
+        "properties": {
+          "code": {
+            "type": "integer",
+            "title": "Code",
+            "default": 0
+          },
+          "message": {
+            "type": "string",
+            "title": "Message",
+            "default": "success"
+          },
+          "data": {
+            "$ref": "#/components/schemas/Suggestion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "title": "ApiResponse[Suggestion]"
       },
       "ApiResponse_TicketRead_": {
         "properties": {
@@ -2682,6 +2753,75 @@
         ],
         "title": "SLASummary"
       },
+      "Source": {
+        "properties": {
+          "chunk_id": {
+            "type": "string",
+            "title": "Chunk Id"
+          },
+          "document_id": {
+            "type": "string",
+            "title": "Document Id"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "content": {
+            "type": "string",
+            "title": "Content"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chunk_id",
+          "document_id",
+          "version",
+          "title",
+          "content",
+          "score"
+        ],
+        "title": "Source"
+      },
+      "Suggestion": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "ok",
+              "insufficient_evidence"
+            ],
+            "title": "Status"
+          },
+          "draft": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Draft"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/Source"
+            },
+            "type": "array",
+            "title": "Sources"
+          }
+        },
+        "type": "object",
+        "required": [
+          "status",
+          "draft",
+          "sources"
+        ],
+        "title": "Suggestion"
+      },
       "TicketAssignRequest": {
         "properties": {
           "assignee_id": {
@@ -3226,11 +3366,5 @@
         "scheme": "bearer"
       }
     }
-  },
-  "servers": [
-    {
-      "url": "http://localhost:8000",
-      "description": "本地开发"
-    }
-  ]
+  }
 }

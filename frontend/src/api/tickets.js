@@ -1,4 +1,5 @@
 import request from '../utils/request.js'
+export const generateReplySuggestion = (id) => request.post(`/tickets/${id}/reply-suggestion`, {}, { timeout: 250000 })
 export const getTickets = (params) => request.get('/tickets', { params })
 export const getTicketDetail = (id) => request.get(`/tickets/${id}`)
 export const createTicket = (data) => request.post('/tickets', data)

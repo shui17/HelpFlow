@@ -15,6 +15,15 @@ class Settings(BaseSettings):
     )
 
     app_name: str = Field(default="HelpFlow", min_length=1)
+    rag_generation_url: str = "https://api.deepseek.com"
+    rag_generation_model: str = "deepseek-flash"
+    rag_generation_key: SecretStr | None = None
+    rag_embedding_url: str = ""
+    rag_embedding_model: str = ""
+    rag_embedding_key: SecretStr | None = None
+    rag_timeout: float = Field(default=45, ge=1, le=120)
+    rag_top_k: int = Field(default=4, ge=1, le=8)
+    rag_min_score: float = Field(default=0.5, ge=-1, le=1)
     cors_origins: list[str] = ["http://localhost:5173"]
     database_url: SecretStr = SecretStr("mysql+asyncmy://helpflow@127.0.0.1:3306/helpflow?charset=utf8mb4")
     jwt_secret_key: SecretStr | None = None

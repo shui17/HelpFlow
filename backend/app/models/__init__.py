@@ -1,6 +1,7 @@
 """业务、通知与 SLA 映射；SLA 摘要按批预加载，其余关系禁止隐式 IO。"""
 
 from datetime import datetime
+from app.models.knowledge import KnowledgeDocument, KnowledgeVersion, KnowledgeChunk
 
 from sqlalchemy import BigInteger, Boolean, CheckConstraint, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
