@@ -12,7 +12,7 @@ from app.models.knowledge import KnowledgeDocument
 from app.errors import AppError
 from app.schemas import ApiResponse
 from app.services.rag_provider import ModelProvider
-from app.services.knowledge import retrieve
+from app.services.knowledge import retrieve, retrieval_text
 from app.pagination import EntityId
 
 router = APIRouter(prefix="/tickets", tags=["reply-assistant"])
@@ -62,7 +62,7 @@ async def suggest(ticket_id: EntityId, request: Request, session: SessionDepende
         provider.configured("generation")
         provider.configured("embedding")
         async with asyncio.timeout(request.app.state.settings.rag_timeout * 2 + 5):
-            sources = await retrieve(session, provider, json.dumps(content, ensure_ascii=False), request.app.state.settings)
+            sources = await retrieve(session, provider, retrieval_text(content), request.app.state.settings)
             result = await provider.generate(content, sources) if sources else {"status": "insufficient_evidence", "draft": "", "sources": []}
         _, current = await context_snapshot(session, ticket_id, user_id)
         if fingerprint != current:

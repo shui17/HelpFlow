@@ -10,6 +10,25 @@ from app.services.rag_provider import vector
 from app.errors import AppError
 
 
+def retrieval_text(context):
+    """仅嵌入公开正文；为最新补充留预算，排除 JSON 字段和 ID。"""
+    fields = [(context.get('title', ''), 200), (context.get('description', ''), 900)]
+    fields.extend((c.get('content', ''), 800) for c in reversed(context.get('comments', [])))
+    parts, seen, remaining = [], set(), 2000
+    for value, limit in fields:
+        value = value.strip()
+        if not value or value in seen:
+            continue
+        seen.add(value)
+        separator = 1 if parts else 0
+        length = min(limit, remaining - separator)
+        if length <= 0:
+            break
+        parts.append(value[:length])
+        remaining -= len(parts[-1]) + separator
+    return '\n'.join(parts)
+
+
 def parse_document(path):
     path = Path(path)
     if path.stat().st_size > 100_000:

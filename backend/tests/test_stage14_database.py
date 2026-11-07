@@ -73,6 +73,7 @@ def test_suggestion_authorization_privacy_and_recheck(client, database_url, monk
     monkeypatch.setattr(ModelProvider, 'configured', lambda *args: None)
     async def no_sources(*args):
         assert 'PRIVATE_INTERNAL_NOTE' not in args[2]
+        assert args[2] == '工单完整流程\n验证事务和时间线'
         return []
     monkeypatch.setattr(rag, 'retrieve', no_sources)
     response = client.post(path+'/reply-suggestion', headers=agent)

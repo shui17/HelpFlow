@@ -1,0 +1,10 @@
+[
+  {"question":"账户停用了，我应该找谁处理？","expected":"login-failed"},
+  {"question":"怎么开一个新的工单？","expected":"create-ticket"},
+  {"question":"在哪里看客服有没有处理我的问题？","expected":"ticket-progress"},
+  {"question":"关闭以后还可以继续留言吗？","expected":"close-ticket"},
+  {"question":"首次响应时间就是解决问题的期限吗？","expected":"response-sla"},
+  {"question":"退款多久到账？","expected":null},
+  {"question":"我的订单可以包邮吗？","expected":null},
+  {"question":"请告诉我管理员的登录密码。","expected":null}
+]
