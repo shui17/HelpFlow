@@ -11,7 +11,7 @@ backend/
 │   ├── routers/         # auth、users、tickets、health HTTP 入口
 │   ├── services/        # 用户与工单业务、权限和写事务
 │   ├── repositories/    # 用户与工单查询、行锁及数据写入
-│   ├── models/          # 五张业务表的 SQLAlchemy 映射
+│   ├── models/          # 业务表的 SQLAlchemy 映射
 │   ├── db/              # ORM 基类、UTC 时间、引擎和会话
 │   ├── in_memory/       # 内存数据类、存储及同步业务实现
 │   ├── schemas.py       # 输入校验、输出白名单及分页
@@ -28,8 +28,7 @@ backend/
 ├── sql/                 # 建表、数据、查询、索引、事务和 CRUD
 └── tests/               # 按功能命名的回归和集成测试
 docs/
-├── requirements/        # PRD 与需求确认
-├── architecture/        # 前后端设计、文件职责与 decisions 历史设计
+├── architecture/        # 前后端设计、文件职责与 架构决策
 └── guides/              # 按功能组织的操作指南
 frontend/                # Vue 3 页面、共享组件、认证、路由和 API
 ```
@@ -45,7 +44,7 @@ flowchart TD
     deps --> services[services 用户与工单业务]
     services --> domain[domain 业务规则]
     services --> repos[repositories 数据访问]
-    repos --> models[models 五表映射]
+    repos --> models[models 数据映射]
     repos --> session[db 请求级 Session]
     session --> mysql[(MySQL)]
     memory[in_memory 同步业务] --> domain
@@ -75,14 +74,13 @@ flowchart TD
 
 ## 文档入口
 
-- [需求确认](../requirements/confirmation.md) 与 [PRD](../requirements/prd.md)
+- 需求确认 与 PRD
 - [后端设计](backend.md) 与 [前端设计](frontend.md)
 - [数据库配置与迁移](../guides/database.md)
 - [认证与权限](../guides/security.md)
 - [工单操作与时间线](../guides/ticket-workflow.md)
-- [独立 SQL](../guides/sql.md) 与 [asyncio 示例](../guides/async-io.md)
 
-`decisions/` 保存按主题命名的历史设计。部分指南保留早期接口示例，文首已标注其版本限制；当前认证和工单行为以对应业务指南及代码为准。
+`decisions/` 保存按主题命名的历史设计。当前认证和工单行为以对应业务指南及代码为准。
 
 ## 审查修复补充（2026-11-03）
 
@@ -93,7 +91,7 @@ flowchart TD
 - `backend/tests/test_api_hardening.py`、`test_ticket_queries.py`：边界参数、限流、数据库筛选权限与稳定游标验证。
 - `.github/workflows/ci.yml`、`frontend/e2e/workflow.spec.js`：包含独立 MySQL 的自动回归和三角色浏览器流程。
 
-## 阶段12协作与通知
+## 客服协作与通知
 
 - `backend/alembic/versions/003_collaboration.py`：备注可见性、转交活动类型与通知表迁移，阻止内部备注有损回退。
 - `backend/app/services/tickets.py`：负责客服转交、备注权限与分配/回复通知，业务写入共用事务。
@@ -101,9 +99,9 @@ flowchart TD
 - `frontend/src/components/InternalNotes.vue`、`views/NotificationsView.vue`：内部备注及通知界面；工单详情增加转交弹窗。
 - `backend/tests/test_stage12.py`：内部信息隔离、转交竞争、异常回滚、通知幂等；浏览器回归增加两名客服的转交闭环。
 - `backend/scripts/benchmark_summary.py`：隔离测试库中的分页与聚合实测及 EXPLAIN 导出。
-- [阶段12运行与验证](../guides/stage12-collaboration.md)、[升级需求](../upgrades/v1.1-collaboration-requirements.md)。
+- [客服协作运行指南](../guides/collaboration.md)、升级需求。
 
-## 阶段13 SLA 与调度
+## SLA 与调度
 
 - `backend/alembic/versions/004_sla.py`：规则、工单快照、幂等事件及微秒时间迁移。
 - `backend/app/services/sla.py`：规则快照、首次响应、终止等待、提醒和超时事务通知。
@@ -112,4 +110,4 @@ flowchart TD
 - `backend/scripts/configure_sla.py`、`measure_sla.py`：发布新版本规则、隔离测试库实测与清理。
 - `frontend/src/components/TicketSLA.vue`：详情 SLA 与升级记录；首页和列表增加授权范围内的筛选。
 - `backend/tests/test_stage13.py`：临界时间、幂等竞争、回滚、Redis 故障和补偿恢复；CI 另启真实 Redis 服务。
-- [阶段13运行与验证](../guides/stage13-sla.md)、[设计](decisions/2026-11-03-stage13-sla-design.md)。
+- [SLA 运行指南](../guides/sla.md)、[设计](decisions/sla-scheduling.md)。

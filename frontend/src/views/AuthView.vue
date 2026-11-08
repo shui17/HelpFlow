@@ -35,12 +35,12 @@ async function submit() {
   finally { form.password = ''; form.confirm_password = ''; submitting.value = false }
 }
 </script>
-<template><div class="auth-page"><section class="auth-story"><div class="brand"><span class="brand-mark">H</span>HelpFlow</div><div><div class="eyebrow">CUSTOMER SUPPORT, SIMPLIFIED</div><h1>每一个问题，<br>都值得被认真解决。</h1><p>从提交到解决，让沟通清晰，让服务有序。</p><div class="story-line"><span>01 提交问题</span><span>02 协作处理</span><span>03 确认解决</span></div></div><small>HelpFlow · 客服工单管理系统</small></section>
-  <section class="auth-form-area"><div class="auth-card"><div class="eyebrow">欢迎来到 HELPFLOW</div><h2>{{ registering ? '创建您的账号' : '登录工作空间' }}</h2><p class="muted">{{ registering ? '注册普通用户账号，随时跟进您的问题。' : '登录账号，继续跟进您的工单。' }}</p>
+<template><div class="auth-page"><section class="auth-story"><div class="brand"><span class="brand-mark">H</span>HelpFlow</div><div><div class="eyebrow">CUSTOMER SUPPORT, SIMPLIFIED</div><h1>每一个问题，<br>都值得被认真解决。</h1><p>提交问题、查看客服回复并跟进处理结果。</p><div class="story-line"><span>01 提交问题</span><span>02 协作处理</span><span>03 确认解决</span></div></div><small>HelpFlow · 客服工单管理系统</small></section>
+  <section class="auth-form-area"><div class="auth-card"><div class="eyebrow">欢迎来到 HELPFLOW</div><h2>{{ registering ? '创建您的账号' : '登录工作空间' }}</h2><p class="muted">{{ registering ? '注册后即可提交和跟进工单。' : '使用邮箱和密码登录。' }}</p>
     <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon class="space-bottom" />
     <el-form ref="formRef" :model="form" :rules="rules" :validate-on-rule-change="false" label-position="top" @submit.prevent="submit">
       <el-form-item v-if="registering" label="用户名" prop="username"><el-input v-model.trim="form.username" autocomplete="username" maxlength="30" /></el-form-item>
-      <el-form-item label="邮箱" prop="email"><el-input v-model.trim="form.email" type="email" autocomplete="email" maxlength="255" placeholder="you@example.com" /></el-form-item>
+      <el-form-item label="邮箱" prop="email"><el-input v-model.trim="form.email" type="email" autocomplete="email" maxlength="255" placeholder="请输入邮箱地址" /></el-form-item>
       <el-form-item label="密码" prop="password"><el-input v-model="form.password" type="password" show-password :autocomplete="registering ? 'new-password' : 'current-password'" maxlength="64" /></el-form-item>
       <el-form-item v-if="registering" label="确认密码" prop="confirm_password"><el-input v-model="form.confirm_password" type="password" show-password autocomplete="new-password" maxlength="64" /></el-form-item>
       <el-button type="primary" native-type="submit" class="full-width" :loading="submitting">{{ registering ? '创建账号' : '登录' }}</el-button>

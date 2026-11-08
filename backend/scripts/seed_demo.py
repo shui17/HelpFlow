@@ -18,10 +18,21 @@ from app.services.users import UserService
 from scripts.init_admin import init_admin
 
 ACCOUNTS = (
-    ('演示管理员', 'admin@demo.example.com', 'admin'),
-    ('演示用户', 'user@demo.example.com', 'user'),
-    ('演示客服一', 'agent1@demo.example.com', 'agent'),
-    ('演示客服二', 'agent2@demo.example.com', 'agent'),
+    ('平台管理员', 'admin@demo.example.com', 'admin'),
+    ('林晓', 'user@demo.example.com', 'user'),
+    ('陈然', 'agent1@demo.example.com', 'agent'),
+    ('周宁', 'agent2@demo.example.com', 'agent'),
+)
+
+TICKETS = (
+    ('演示：账号登录问题', '账号无法登录',
+     '输入正确的账号和密码后，页面仍提示登录失败。', 'open'),
+    ('演示：支付结果未更新', '付款后订单状态未更新',
+     '付款已成功，但订单详情仍显示待支付。', 'in_progress'),
+    ('演示：产品使用咨询', '咨询如何导出订单记录',
+     '需要将上个月的订单记录导出，想了解操作步骤。', 'resolved'),
+    ('演示：客服协作转交', '订单付款记录与账单不一致',
+     '付款记录和账单显示的金额不同，请协助核对。', 'collaboration'),
 )
 
 
@@ -54,13 +65,16 @@ async def seed(settings, password):
                 elif user.role != role:
                     raise ValueError('既有演示账号角色不同，拒绝覆盖，请使用新的演示库')
                 users[email.split('@')[0]] = identity(user)
-            for title, target in [('演示：账号登录问题', 'open'), ('演示：支付结果未更新', 'in_progress'), ('演示：产品使用咨询', 'resolved'), ('演示：客服协作转交', 'collaboration')]:
-                existing = await session.scalar(select(Ticket).where(Ticket.creator_id == users['user'].id, Ticket.title == title))
+            for old_title, title, description, target in TICKETS:
+                existing = await session.scalar(select(Ticket.id).where(
+                    Ticket.creator_id == users['user'].id,
+                    Ticket.title.in_((old_title, title)),
+                ))
                 await session.rollback()
                 if existing is not None:
                     continue
                 service = TicketService(session)
-                ticket = await service.create_ticket(title, '这是专用演示工单，可用于本地流程演练。',
+                ticket = await service.create_ticket(title, description,
                     users['user'].id, TicketPriority.HIGH, actor=users['user'])
                 if target != 'open':
                     await service.claim_ticket(ticket.id, actor=users['agent1'])

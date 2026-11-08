@@ -4,11 +4,11 @@
 
 ## 启动
 
-在 backend 目录执行 `uv sync`，复制 `.env.example` 为 `.env`，填入数据库连接。使用 `python -c "import secrets; print(secrets.token_urlsafe(48))"` 在本地生成随机密钥，填入 `HELPFLOW_JWT_SECRET_KEY`。密钥至少 32 字节，无默认值；缺少时应用启动失败。不要提交 `.env`。
+在 backend 目录执行 `uv sync --locked`，复制 `.env.example` 为 `.env`，填入数据库连接。使用 `python -c "import secrets; print(secrets.token_urlsafe(48))"` 在本地生成随机密钥，填入 `HELPFLOW_JWT_SECRET_KEY`。密钥至少 32 字节，无默认值；缺少时应用启动失败。不要提交 `.env`。
 
-执行 `uv run alembic upgrade head`，再执行 `uv run python -m scripts.init_admin --username 管理员 --email admin@example.com`，通过隐藏输入设置密码。脚本重复执行不会重置现有管理员，也不会将既有普通用户自动升级。阶段五的无效占位密码不能登录，请注册新账号；已有数据保持不变。
+执行 `uv run alembic upgrade head`，再执行 `uv run python -m scripts.init_admin --username 管理员 --email admin@example.com`，通过隐藏输入设置密码。脚本重复执行不会重置现有管理员，也不会将既有普通用户自动升级。早期数据中的无效占位密码不能登录，请注册新账号；已有数据保持不变。
 
-执行 `uv run uvicorn app.main:app --reload`。本阶段不新增数据库迁移，复用阶段五五表结构。
+执行 `uv run uvicorn app.main:app --reload`。启动前应执行全部数据库迁移。
 
 ## Apifox 验证
 
@@ -26,11 +26,11 @@
 
 登录邮箱转小写，未知邮箱与错误密码返回相同提示。响应 Schema 不暴露 password_hash；参数错误不回显输入值。密码计算在线程池中执行，避免阻塞异步事件循环。JWT 固定 HS256，强制校验 sub、role、iat、exp、pwdv；权限使用数据库当前角色。认证查询事务在业务写事务之前结束。
 
-## 代码与后续边界
+## 代码职责与权限边界
 
 `app/security.py` 负责密码和 JWT，`app/dependencies.py` 负责认证和角色依赖，`app/services/tickets.py` 负责工单归属，`app/services/users.py` 负责管理限制和事务。原公开 `POST /users` 已移除，注册统一使用 `/auth/register`。状态修改保留既有 PATCH 路径。
 
-客服领取、管理员分配、撤销、工单活动时间线及完整并发业务在阶段七实现。目前客服负责关系可由隔离测试预置以验证权限。管理员不可通过普通用户管理接口创建其他管理员。改密会撤销旧 Token；账号禁用期间 Token 被拒绝，重新启用后仍未过期且密码未改变的 Token 可继续使用。
+客服领取、管理员分配、撤销及工单时间线见 [工单流程](ticket-workflow.md)。管理员不可通过普通用户管理接口创建其他管理员。改密会撤销旧 Token；账号禁用期间 Token 被拒绝，重新启用后仍未过期且密码未改变的 Token 可继续使用。
 
 ## 自动验证
 

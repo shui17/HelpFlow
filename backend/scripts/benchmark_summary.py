@@ -83,7 +83,7 @@ def measure(client, headers, aggregate):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--tickets', type=int, default=250)
-    parser.add_argument('--output', type=Path, default=Path('../docs/guides/stage12-summary-measurement.json'))
+    parser.add_argument('--output', type=Path, default=Path(__file__).resolve().parents[2] / '.local/summary-measurement.json')
     args = parser.parse_args()
     url = os.environ['HELPFLOW_TEST_DATABASE_URL']
     parsed = make_url(url)

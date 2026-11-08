@@ -68,6 +68,7 @@ async def measure(output):
             sample_notifications=notifications,
             overdue_detection_delay_seconds=[round((r.occurred_at-r.due_at).total_seconds(), 6) for r in escalations],
             limitations="Single local scanner, synthetic deadlines, no external network or throughput claim")
+        output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
         print(json.dumps(report, ensure_ascii=False))
     finally:
@@ -83,5 +84,5 @@ async def measure(output):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[2] / "docs/guides/stage13-sla-measurement.json")
+    parser.add_argument("--output", type=Path, default=Path(__file__).resolve().parents[2] / ".local/sla-measurement.json")
     asyncio.run(measure(parser.parse_args().output))

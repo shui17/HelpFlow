@@ -20,7 +20,7 @@
 
 ## Apifox 手工验证
 
-准备普通用户 A、B，客服 C、D，管理员 E，分别保存 Token。客服由管理员调整普通用户角色得到，管理员按阶段六初始化脚本创建。
+准备普通用户 A、B，客服 C、D，管理员 E，分别保存 Token。客服由管理员调整普通用户角色得到，管理员使用 `scripts.init_admin` 初始化脚本创建。
 
 1. A 创建工单并修改标题；活动列表应为 created、updated。B 查询工单与活动均应返回 403。
 2. C 领取，确认状态仍为 open、负责人为 C、assigned_at 非空。D 再领取收到 409。A 此时修改或撤销收到 409。
@@ -38,7 +38,7 @@
 
 领取使用数据库条件 UPDATE，根据影响行数判断成功；不是先查后普通更新。分配、撤销、修改及状态流转使用工单行锁。分配和领取还锁定目标客服用户行，与用户管理的禁用、降级共用行锁。所有业务变化和活动日志在同一事务中提交；日志插入或提交失败，负责人、状态和日志全部回滚。
 
-读取时间线复用工单可见性规则。活动返回字段为 id、ticket_id、action、operator_id、old_status、new_status、old_assignee_id、new_assignee_id、description、created_at；不存在对应变化的前后值可以为空。不会为阶段七之前创建的工单自动补造历史日志。
+读取时间线复用工单可见性规则。活动返回字段为 id、ticket_id、action、operator_id、old_status、new_status、old_assignee_id、new_assignee_id、description、created_at；不存在对应变化的前后值可以为空。不会为活动日志功能上线前创建的工单自动补造历史日志。
 
 ## 自动验证
 
@@ -48,11 +48,11 @@
 uv run pytest -q
 ```
 
-真实数据库测试需要显式设置 `HELPFLOW_TEST_DATABASE_URL`，驱动必须是 mysql+asyncmy，数据库名必须以 `helpflow_stage5_test` 开头。测试库需预先创建，测试会运行迁移、插入测试账号和工单，阶段五回归还会执行迁移升降级；不要指向业务库。未配置时数据库用例会跳过。
+真实数据库测试需要显式设置 `HELPFLOW_TEST_DATABASE_URL`，驱动必须是 mysql+asyncmy，数据库名必须以 `helpflow_stage5_test` 开头。测试库需预先创建，测试会运行迁移、插入测试账号和工单，数据库迁移回归还会执行迁移升降级；不要指向业务库。未配置时数据库用例会跳过。
 
 ```powershell
 $env:HELPFLOW_TEST_DATABASE_URL = 'mysql+asyncmy://<test-user>:<password>@127.0.0.1:3306/helpflow_stage5_test_stage7'
 uv run pytest -q tests/test_ticket_workflow.py
 ```
 
-阶段七用例覆盖完整请求流程、三角色权限、分配目标校验、并发领取唯一成功、失败操作无日志，以及日志插入失败和提交失败后的回滚。
+工单流程用例覆盖完整请求流程、三角色权限、分配目标校验、并发领取唯一成功、失败操作无日志，以及日志插入失败和提交失败后的回滚。

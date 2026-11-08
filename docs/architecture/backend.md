@@ -9,14 +9,14 @@
 | 文档类型 | 后端详细设计                                                         |
 | 文档版本 | V1.0                                                                 |
 | 编写日期 | 2026-10-04                                                           |
-| 上游文档 | `docs/requirements/confirmation.md`、`docs/requirements/docs/requirements/prd.md`                   |
+| 相关文档 | [工程文档索引](../README.md)、[接口契约](../api/helpflow.openapi.json) |
 | 后端技术 | Python、FastAPI、Pydantic、SQLAlchemy Async、asyncmy、Alembic、MySQL |
 
 ## 2 文档目的
 
 本文档用于指导 HelpFlow 后端框架、数据库和 API 实现，明确后端目录、分层职责、数据表、Schema、接口、权限、事务、并发、异常、迁移和 Apifox 验证要求。
 
-本文档不包含前端组件实现和学习路线。前端实际展示和交互以 `docs/architecture/frontend.md` 为准，业务范围以需求确认书和 PRD 为准。
+本文档不包含前端组件实现和学习路线。前端实际展示和交互以 `docs/architecture/frontend.md` 为准，业务能力与操作约束见工程文档索引中的功能指南。
 
 ## 3 后端目标
 
@@ -81,13 +81,19 @@ pyjwt
 pwdlib[argon2]
 email-validator
 python-multipart
+cryptography
+redis
+httpx
+langgraph
+langgraph-checkpoint-sqlite
+langsmith
 ```
 
-具体版本在创建 `requirements.txt` 时固定。当前不引入 Redis、Celery、pytest、消息队列和额外 ORM。
+依赖声明以 `backend/pyproject.toml` 为准，解析版本由 `backend/uv.lock` 锁定；使用 `uv sync --locked` 安装。Redis 用于可选的 SLA 调度索引，HTTPX 用于模型服务请求，LangGraph 与 SQLite 检查点用于客服任务助手；pytest 位于 dev 依赖组。当前不使用 Celery 或独立消息队列。
 
 ### 5.2 Python 约定
 
-- Python 3.11 或更高版本。
+- Python 3.14 或更高版本。
 - 异步函数使用 `async def`。
 - 数据库操作统一使用 `AsyncSession`。
 - 不在异步路由中调用阻塞型数据库驱动。
@@ -155,7 +161,8 @@ backend/
 │   └── init_admin.py
 ├── .env.example
 ├── alembic.ini
-└── requirements.txt
+├── pyproject.toml
+└── uv.lock
 ```
 
 ### 6.1 文件边界
@@ -1147,63 +1154,6 @@ ticket_id=
 - 非法状态请求不会修改数据库。
 - 并发领取只有一个成功。
 - 密码哈希和敏感配置不出现在响应。
-
-## 29 后端阶段安排
-
-### 后端阶段 1：基础框架
-
-- 建立目录和配置。
-- 创建异步数据库 Engine 与 Session。
-- 配置 CORS、异常处理和统一响应。
-- 实现健康检查。
-
-验收：服务启动，前端和 Apifox 可以访问健康检查。
-
-### 后端阶段 2：认证
-
-- 创建 `users` 模型与迁移。
-- 完成密码、JWT、认证依赖和管理员初始化。
-- 完成注册、登录、当前用户和修改密码。
-
-验收：三种角色可登录，禁用账号和无效 Token 被拒绝。
-
-### 后端阶段 3：普通用户工单
-
-- 创建 `tickets` 模型与迁移。
-- 完成创建、列表、详情、修改和撤销。
-- 完成用户范围查询和概览。
-
-验收：用户只能操作自己的工单，数据保存到 MySQL。
-
-### 后端阶段 4：领取、分配与活动
-
-- 创建活动表与迁移。
-- 完成条件领取、分配、重新分配和活动记录。
-
-验收：并发领取仅一个成功，活动与业务修改保持事务一致。
-
-### 后端阶段 5：回复与状态
-
-- 创建回复表与迁移。
-- 完成回复、状态机和时间线查询。
-
-验收：合法流转成功，非法流转和越权被拒绝。
-
-### 后端阶段 6：用户管理与概览
-
-- 创建用户管理日志表与迁移。
-- 完成用户查询、角色调整、启用和禁用。
-- 完成三种角色概览。
-
-验收：安全限制和管理日志正确。
-
-### 后端阶段 7：Apifox 验证与整理
-
-- 完成接口目录、环境变量和用例。
-- 修正响应、权限、事务和错误信息不一致。
-- 检查日志与敏感数据。
-
-验收：PRD 指定的主要测试场景全部通过。
 
 ## 30 后端完成标准
 
